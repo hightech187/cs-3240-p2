@@ -31,7 +31,7 @@ public enum RegexTokenType {
 	INVALID_ESCAPE,				// If an invalid character escape has occurred
 	OTHER,						// OTHER or INVALID type of Token
 	EQUALS_OP,
-	POUND,
+	POUND_OP,
 	PIPE_OP,
 	COMMA,
 	SEMICOLON,
@@ -47,8 +47,10 @@ public enum RegexTokenType {
 	MAXFREQSTRING_OP,
 	ASCIISTR,
 	ID,
-	INVALID_TOKEN,
-	KEYWORD;
+	START_REGEX,
+	END_REGEX,
+	START_ASCII,
+	INVALID_TOKEN;
 
 	/**
 	 * Returns an English description for the token
@@ -89,10 +91,50 @@ public enum RegexTokenType {
 				return "End Of String";
 			case INVALID_ESCAPE:
 				return "Invalid Escape Sequence";	
-			case ID:										// TODO: cases for other types
+			case ID:
 				return "ID";
-			case KEYWORD:
-				return "Keyword";
+			case ASCIISTR:
+				return "ASCII-STR";
+			case EQUALS_OP:
+				return "keyword =";
+			case POUND_OP:
+				return "keyword #";
+			case PIPE_OP:
+				return "keyword >!";
+			case COMMA:
+				return "keyword ,";
+			case SEMICOLON:
+				return "keyword ;";
+			case BEGIN_OP:
+				return "keyword begin";
+			case END_OP:
+				return "keyword end";
+			case REPLACE_OP:
+				return "keyword replace";
+			case RECURSIVE_REPLACE_OP:
+				return "keyword recursivereplace";
+			case INTERS_OP:
+				return "keyword inters";
+			case PRINT_OP:
+				return "keyword print";
+			case WITH_OP:
+				return "keyword with";
+			case FIND_OP:
+				return "keyword find";
+			case DIFF_OP:
+				return "keyword diff";
+			case MAXFREQSTRING_OP:
+				return "keyword maxfreqinstring";
+			case INVALID_TOKEN:
+				return "invalid token";
+			case START_REGEX:
+				return "start of regex";
+			case START_ASCII:
+				return "start of ascii";
+			case END_REGEX:
+				return "end of regex";
+			
+			
 			default:
 				return "INVALID Token";
 		}

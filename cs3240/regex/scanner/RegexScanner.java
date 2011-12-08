@@ -88,7 +88,7 @@ public class RegexScanner {
 		this.keywords.put("(", RegexTokenType.OPEN_PAR);
 		this.keywords.put(")", RegexTokenType.CLOSE_PAR);
 		this.keywords.put("=", RegexTokenType.EQUALS_OP);
-		this.keywords.put("#", RegexTokenType.POUND);
+		this.keywords.put("#", RegexTokenType.POUND_OP);
 		this.keywords.put(">!", RegexTokenType.PIPE_OP);
 		this.keywords.put(",", RegexTokenType.COMMA);
 		this.keywords.put(";", RegexTokenType.SEMICOLON);
@@ -149,6 +149,9 @@ public class RegexScanner {
 					curPos++;
 				}
 			}
+			
+			if (curPos >= regex.length())
+				this.EOS = true;
 		}
 		
 		return token;
@@ -194,7 +197,7 @@ public class RegexScanner {
 			char cur_char = regex.charAt(curPos);
 
 			if (endRegexOnQuote && cur_char == '\'') {
-				token = new RegexToken("'", RegexTokenType.ANY_CHAR, line_num, curPos);
+				token = new RegexToken("'", RegexTokenType.END_REGEX, line_num, curPos);
 				inRegex = false;
 				curPos++;
 			} else if (cur_char == '\\') {
@@ -310,12 +313,20 @@ public class RegexScanner {
 					do {
 						sb.append(cur_char);
 						curPos++;
+						
+						if (curPos >= regex.length()) {
+							this.EOS = true;
+							break;
+						}
+						
 						cur_char = regex.charAt(curPos);
-					} while (Character.isLetter(cur_char) || Character.isDigit(cur_char) || cur_char == '_');
-					
+					} while (curPos < regex.length() && (Character.isLetter(cur_char) || Character.isDigit(cur_char) || cur_char == '_'));
+										
 					String possibleID = sb.toString();
 					if (possibleID.length() > 10) {
 						token = new RegexToken("ID too long", RegexTokenType.INVALID_TOKEN, line_num, beginPos);
+					} else if (EOS) {
+						token = new RegexToken(sb.toString(), RegexTokenType.ID, line_num, beginPos);
 					} else if (!Character.isWhitespace(regex.charAt(curPos)) && cur_char != ')') {	// ID contains something other than letter, digit, or _
 						token = new RegexToken("ID contains invalid characters", RegexTokenType.INVALID_TOKEN, line_num, beginPos);
 					} else {	// valid ID found
@@ -323,10 +334,10 @@ public class RegexScanner {
 					}
 				} else {	// Not an ID or keyword
 					if (cur_char == '\'') {
-						token = new RegexToken("'", RegexTokenType.ANY_CHAR, line_num, curPos);
+						token = new RegexToken("'", RegexTokenType.START_REGEX, line_num, curPos);
 						inRegex = true;
 					} else if (cur_char == '"') {
-						token = new RegexToken("\"", RegexTokenType.ANY_CHAR, line_num, curPos);
+						token = new RegexToken("\"", RegexTokenType.START_ASCII, line_num, curPos);
 					} else {
 						token = new RegexToken("Expected ID or keyword", RegexTokenType.INVALID_TOKEN, line_num, curPos);
 					}
@@ -427,7 +438,56 @@ public class RegexScanner {
 					 * If the keyword matched the sequence of characters at the 
 					 * current position, then return the representing RegexToken
 					 */
-					return new RegexToken(word, RegexTokenType.KEYWORD, line_num, curPos);
+					
+					RegexTokenType rtt = RegexTokenType.INVALID_TOKEN;	// Initialize rtt to arbitrary type
+					
+					if (word.equals("inters"))
+						rtt = RegexTokenType.INTERS_OP;
+					else if (word.equals("replace"))
+						rtt = RegexTokenType.REPLACE_OP;
+					else {
+						switch (word.charAt(0)) {
+						
+						case 'b':
+							rtt = RegexTokenType.BEGIN_OP; break;
+						case 'e':
+							rtt = RegexTokenType.END_OP; break;
+						case '=':
+							rtt = RegexTokenType.EQUALS_OP; break;
+						case 'r':
+							rtt = RegexTokenType.RECURSIVE_REPLACE_OP; break;
+						case '(':
+							rtt = RegexTokenType.OPEN_PAR; break;
+						case ')':
+							rtt = RegexTokenType.CLOSE_PAR; break;
+						case 'u':
+							rtt = RegexTokenType.UNION_OP; break;
+						case 'p':
+							rtt = RegexTokenType.PRINT_OP; break;
+						case 'w':
+							rtt = RegexTokenType.WITH_OP; break;
+						case 'i':
+							rtt = RegexTokenType.IN_OP; break;
+						case '#':
+							rtt = RegexTokenType.POUND_OP; break;
+						case 'f':
+							rtt = RegexTokenType.FIND_OP; break;
+						case 'd':
+							rtt = RegexTokenType.DIFF_OP; break;
+						case 'm':
+							rtt = RegexTokenType.MAXFREQSTRING_OP; break;
+						case '>':
+							rtt = RegexTokenType.PIPE_OP; break;
+						case ',':
+							rtt = RegexTokenType.COMMA; break;
+						case ';':
+							rtt = RegexTokenType.SEMICOLON; break;
+						default:
+								System.err.println("Impossible!");
+						
+						}
+					}
+					return new RegexToken(word, rtt, line_num, curPos);
 				}
 			}
 			
@@ -552,13 +612,26 @@ public class RegexScanner {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		String input = "matches = (find) 'REGEX'";
+		String input = "matches = (find) 'REGEX' notRegex \"";	// *NOTE*: last " signals the start of an ASCII-Char
+																// (switch to getASCII-Token() next token when tokenType == START_ASCII
+																// the ending " is consumed (never returned)
 		RegexScanner rs = new RegexScanner(input, new java.util.ArrayList<String>(), 1);
 		RegexToken rt;
+		System.out.println("Testing getToken() on: " + input);
 		do {
 			rt = rs.getToken();
 			if (rt != null)
-				System.out.println(RegexTokenType.getTokenDescription(rt) + ": " + rt.getValue() + " at pos(" + rt.getLinePosition() + ")");
+				System.out.println(RegexTokenType.getTokenDescription(rt) + ": \"" + rt.getValue() + "\" at pos(" + rt.getLinePosition() + ")");
+		} while (rt != null && rt.getType() != RegexTokenType.EOS);
+		System.out.println();
+		
+		String input2 = " H3RP my D3RP \"";
+		System.out.println("Testing getASCIIToken() on: " + input2);
+		RegexScanner rs2 = new RegexScanner(input2, new java.util.ArrayList<String>(), 1);
+		do {
+			rt = rs2.getASCIIToken();
+			if (rt != null)
+				System.out.println(RegexTokenType.getTokenDescription(rt) + ": \"" + rt.getValue() + "\" at pos(" + rt.getLinePosition() + ")");
 		} while (rt != null && rt.getType() != RegexTokenType.EOS);
 	}
 }
