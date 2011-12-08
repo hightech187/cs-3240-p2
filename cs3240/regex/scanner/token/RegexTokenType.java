@@ -45,7 +45,10 @@ public enum RegexTokenType {
 	FIND_OP,
 	DIFF_OP,
 	MAXFREQSTRING_OP,
-	ASCIISTR;
+	ASCIISTR,
+	ID,
+	INVALID_TOKEN,
+	KEYWORD;
 
 	/**
 	 * Returns an English description for the token
@@ -86,6 +89,10 @@ public enum RegexTokenType {
 				return "End Of String";
 			case INVALID_ESCAPE:
 				return "Invalid Escape Sequence";	
+			case ID:										// TODO: cases for other types
+				return "ID";
+			case KEYWORD:
+				return "Keyword";
 			default:
 				return "INVALID Token";
 		}
