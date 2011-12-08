@@ -85,6 +85,13 @@ public class RegexParser {
 		statementListTail();
 	}
 	
+	public void statementListTail() {
+		if (peek() != RegexTokenType.END_OP) {
+			statement();
+			statementListTail();
+		}
+	}
+	
 	@SuppressWarnings("unchecked")
 	public void statement() {
 		switch(peek()) {
@@ -92,9 +99,9 @@ public class RegexParser {
 				String ID = match(RegexTokenType.ID_OP).getValue();
 				match(RegexTokenType.EQUALS_OP);
 				switch(peek()) {
-					case POUND:
-						match(RegexTokenType.POUND);
-						integers.put(ID, exp().length());
+					case POUND_OP:
+						match(RegexTokenType.POUND_OP);
+						integers.put(ID, ((ArrayList<Integer>) exp()).size());
 					case MAXFREQSTRING_OP:
 						match(RegexTokenType.OPEN_PAR);
 						ArrayList<String> temp = matchLists.get(match(RegexTokenType.ID_OP).getValue());
@@ -163,6 +170,149 @@ public class RegexParser {
 				throw new Exception(String.format("Line %d (col %d): Regular Expression Parsing Error has occurred", this.token.getLineNumber(), this.token.getLinePosition()));
 		}
 		match(RegexTokenType.SEMICOLON);
+	}
+	
+	public String[] filenames() throws Exception {
+		String names[] = new String[2];
+		names[0] = sourceFile();
+		match(RegexTokenType.PIPE_OP);
+		names[1] = destinationFile();
+		return names;
+	}
+	
+	public String sourceFile() throws Exception {
+		return matchASCII().getValue();
+	}
+	
+	public String destinationFile() throws Exception {
+		return matchASCII().getValue();
+	}
+	
+	@SuppressWarnings("unchecked")
+	public Object exp() throws Exception {
+		switch(peek()) {
+			case OPEN_PAR:
+				match(RegexTokenType.OPEN_PAR);
+				Object o = exp();
+				match(RegexTokenType.CLOSE_PAR);
+				return o;
+			case FIND_OP:
+				ArrayList<String> strings = term();
+				ArrayList<Object> binaryOperation = expTail();
+				
+				if (binaryOperation == null) {
+					return strings;
+				}
+				
+				switch ((RegexTokenType) binaryOperation.get(0)) {
+					case DIFF_OP:
+						for (String i : (ArrayList<String>) binaryOperation.get(1)) {
+							if (strings.contains(i)) {
+								strings.remove(i);
+							}
+						}
+					case UNION_OP:
+						for (String i : (ArrayList<String>) binaryOperation.get(1)) {
+							if (!strings.contains(i)) {
+								strings.add(i);
+							}
+						}
+					case INTERS_OP:
+						for (String i : strings) {
+							if (!((ArrayList<String>) binaryOperation.get(1)).contains(i)) {
+								strings.remove(i);
+							}
+						}
+				}
+				
+				return strings;
+			default:
+				String ID = match(RegexTokenType.ID_OP).getValue();
+				Set<String> set = integers.keySet();
+				Iterator<String> itr = set.iterator();
+				
+				while (itr.hasNext()) {
+					if (itr.next() == ID) {
+						return integers.get(ID);
+					}
+				}
+				
+				while (itr.hasNext()) {
+					if (itr.next() == ID) {
+						return integers.get(ID);
+					}
+				}
+				
+				throw new Exception("The ID value " + ID + " isn't a thing. Try again.");
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	public ArrayList<Object> expTail() throws Exception {
+		ArrayList<Object> binOp = new ArrayList<Object>();
+		
+		binOp.add(binOp());
+		
+		if (binOp.get(0) == null) {
+			return null;
+		}
+		
+		ArrayList<String> strings = term();
+		ArrayList<Object> binaryOperation = expTail();
+		
+		if (binaryOperation == null) {
+			binOp.add(strings);
+			return binOp;
+		}
+		
+		switch ((RegexTokenType) binaryOperation.get(0)) {
+			case DIFF_OP:
+				for (String i : (ArrayList<String>) binaryOperation.get(1)) {
+					if (strings.contains(i)) {
+						strings.remove(i);
+					}
+				}
+			case UNION_OP:
+				for (String i : (ArrayList<String>) binaryOperation.get(1)) {
+					if (!strings.contains(i)) {
+						strings.add(i);
+					}
+				}
+			case INTERS_OP:
+				for (String i : strings) {
+					if (!((ArrayList<String>) binaryOperation.get(1)).contains(i)) {
+						strings.remove(i);
+					}
+				}
+		}
+
+		binOp.add(strings);
+		return binOp;
+	}
+	
+	public ArrayList<String> term() throws Exception {
+		match(RegexTokenType.FIND_OP);
+		DFATable regex = parseRegex().toDFA();
+		match(RegexTokenType.IN_OP);
+		String filename = filename();
+		return findString(regex, filename);
+	}
+	
+	public String filename() throws Exception {
+		return matchASCII().getValue();
+	}
+	
+	public RegexToken binOp() throws Exception {
+		switch(peek()) {
+			case DIFF_OP:
+				return match(RegexTokenType.DIFF_OP);
+			case UNION_OP:
+				return match(RegexTokenType.UNION_OP);
+			case INTERS_OP:
+				return match(RegexTokenType.INTERS_OP);
+			default:
+				return null;
+		}
 	}
 	
 	/**
@@ -585,6 +735,18 @@ public class RegexParser {
 	 */
 	public void setRegex(String regex) {
 		this.regex = regex;
+	}
+	
+	private ArrayList<String> findString(DFATable regex, String file) throws IOException {
+		Driver driver = new Driver(file, regex);
+		ArrayList<Driver.Token> tokens = driver.run();
+		ArrayList<String> strings = new ArrayList<String>();
+		
+		for (Driver.Token i : tokens) {
+			if (!strings.contains(i)) strings.add(i.getValue());
+		}
+		
+		return strings;
 	}
 	
 	private boolean replaceString(DFATable regex, RegexToken ASCII, String[] files) throws Exception {
