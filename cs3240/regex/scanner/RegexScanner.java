@@ -31,6 +31,9 @@ public class RegexScanner {
 	 * A mapping containing regular expression keywords and their types
 	 */
 	private HashMap<String, RegexTokenType> keywords;
+	
+	private HashMap<String, RegexTokenType> regex_keywords;
+	
 	/**
 	 * The type for the characters when scanning, that allows the scanner
 	 * to know what should be a special character or not (should only be RE_CHAR or SET_CHAR)
@@ -58,6 +61,11 @@ public class RegexScanner {
 	 */
 	private Queue<RegexToken> tokenBuffer = new LinkedList<RegexToken>();
 	
+	
+	private boolean inRegex = false;
+	
+	
+	
 	/**
 	 * The base constructor for the RegexScanner that takes in the
 	 * regular expression to scan and the collection of valid
@@ -73,7 +81,75 @@ public class RegexScanner {
 		this.line_num = line_num;
 		// Initialize the keywords mapping, and add the IN keyword
 		this.keywords = new HashMap<String, RegexTokenType>();
-		this.keywords.put("IN", RegexTokenType.IN_OP);
+		
+		
+		this.keywords.put("(", RegexTokenType.OPEN_PAR);
+		this.keywords.put(")", RegexTokenType.CLOSE_PAR);
+		this.keywords.put("=", RegexTokenType.EQUALS_OP);
+		this.keywords.put("#", RegexTokenType.POUND);
+		this.keywords.put(">!", RegexTokenType.PIPE_OP);
+		this.keywords.put(",", RegexTokenType.COMMA);
+		this.keywords.put(";", RegexTokenType.SEMICOLON);
+		this.keywords.put("begin", RegexTokenType.BEGIN_OP);
+		this.keywords.put("end", RegexTokenType.END_OP);
+		this.keywords.put("replace", RegexTokenType.REPLACE_OP);
+		this.keywords.put("recursivereplace", RegexTokenType.RECURSIVE_REPLACE_OP);
+		this.keywords.put("union", RegexTokenType.UNION_OP);
+		this.keywords.put("inters", RegexTokenType.INTERS_OP);
+		this.keywords.put("print", RegexTokenType.PRINT_OP);
+		this.keywords.put("with", RegexTokenType.WITH_OP);
+		this.keywords.put("in", RegexTokenType.IN_OP);
+		this.keywords.put("find", RegexTokenType.FIND_OP);
+		this.keywords.put("diff", RegexTokenType.DIFF_OP);
+		this.keywords.put("maxfreqstring", RegexTokenType.MAXFREQSTRING_OP);
+		
+		this.regex_keywords.put("IN", RegexTokenType.IN_OP);
+	}
+	
+	/**
+	 * Returns the next ASCII-STR, not including any quotes
+	 * @return next available ASCII-STR
+	 */
+	public RegexToken getASCIIToken() {
+		// If the end of the string has been reached, return an EOS token
+		if (EOS) {
+			return new RegexToken(RegexTokenType.EOS, line_num, curPos);
+		}
+		
+		RegexToken token = null;		
+		char cur_char;
+		StringBuilder tokenValue = new StringBuilder();
+		
+		boolean done = false;
+		while (!done) {
+			cur_char = regex.charAt(curPos);
+			if (cur_char == '\\') {
+				if (regex.length() > curPos + 1) {		// at least one character following
+					if (regex.charAt(curPos+1) == '"') {
+						tokenValue.append("\"");
+						curPos += 2;					// move ahead of both \ and "
+					} else {							// nothing being escaped, simply add \
+						tokenValue.append("\\");
+						curPos++;
+					}
+				} else {
+					this.EOS = true;
+					curPos++;			// TODO: increment curPos here? vvv I think he does down there...
+					return new RegexToken(RegexTokenType.INVALID_ESCAPE, line_num, curPos);
+				}
+			} else {
+				if (cur_char == '"') {		// done building ASCI-STR
+					token = new RegexToken(tokenValue.toString(), RegexTokenType.ASCIISTR, line_num, curPos);
+					curPos++;
+					done = true;
+				} else {
+					tokenValue.append(cur_char);
+					curPos++;
+				}
+			}
+		}
+		
+		return token;
 	}
 	
 	/**
@@ -82,21 +158,125 @@ public class RegexScanner {
 	 * 
 	 * @return the next RegexToken
 	 */
-	public RegexToken getToken() { 
-		// If the token buffer is not empty, then return the token at the head of the buffer 
-		if (!tokenBuffer.isEmpty()) {
-			return tokenBuffer.poll();
-		}
+	public RegexToken getToken() {
 		
-		// If the end of the string has been reached, return an EOS token
-		if (EOS) {
-			return new RegexToken(RegexTokenType.EOS, line_num, curPos);
-		}
-		
-		RegexToken token = null;
-		
-		// If whitespace is being ignored, loop until a non-whitespace character is identified
-		if (ignoreWhitespace) {
+		if (inRegex) {
+
+			// If the token buffer is not empty, then return the token at the head of the buffer 
+			if (!tokenBuffer.isEmpty()) {
+				return tokenBuffer.poll();
+			}
+
+			// If the end of the string has been reached, return an EOS token
+			if (EOS) {
+				return new RegexToken(RegexTokenType.EOS, line_num, curPos);
+			}
+
+			RegexToken token = null;
+
+			// If whitespace is being ignored, loop until a non-whitespace character is identified
+			if (ignoreWhitespace) {
+				// Loop through until a non-whitepsace character is found, or until the end of the string is reached
+				while (curPos < regex.length() && Character.isWhitespace(regex.charAt(curPos))) {
+					curPos++;
+				}
+				// If the end of string was reached, then set EOS to true and return an EOS token
+				if (curPos >= regex.length()) {
+					EOS = true;
+					return new RegexToken(RegexTokenType.EOS, line_num, curPos);
+				}
+			}
+
+
+			// Get the character at the current scanning position
+			char cur_char = regex.charAt(curPos);
+
+			if (cur_char == '\\') {
+				// If current character is escape character, then move to the next scanning position
+				curPos++;
+
+				if (curPos >= regex.length()) {
+					/*
+					 *  If there was no character after the escape character set EOS to true
+					 *  and return an INVALID_ESCAPE token
+					 */
+					this.EOS = true;
+					return new RegexToken(RegexTokenType.INVALID_ESCAPE, line_num, curPos);
+				}
+
+				if (regexCharType == RegexTokenType.RE_CHAR) {
+					// If the current scanning type is RE_CHAR, see if a keyword exist
+					token = identifyKeywordToken();
+				}
+
+				if (token == null) {
+					// If a keyword was not found, then set the token with the value of the current character
+					String value = this.regex.substring(curPos, curPos+1);
+					token = new RegexToken(value, regexCharType, line_num, curPos);
+					curPos++; // move the current position to the next location
+				} else {
+					/*
+					 *  If a keyword was found, then break the keyword down
+					 *  to it's individual characters and add those tokens
+					 *  to the token buffer
+					 */
+					String value = token.getValue();
+					// Break down the string into its individual tokens and add them to the token buffer
+					for (int i = 1; i < value.length(); ++i) {
+						tokenBuffer.add(new RegexToken(String.valueOf(value.charAt(i)), regexCharType, line_num, curPos+i));
+					}
+					// Set the current token as the character at the first position in the string
+					token.setValue(String.valueOf(value.charAt(0)));
+					token.setType(regexCharType);
+					token.setLineNumber(line_num);
+					token.setLinePosition(curPos);
+					// Move the current position scanner past the escaped keyword
+					this.curPos += value.length();
+
+				}
+			} else if (cur_char == '$') {
+				// If the character is the character class identifier, try to identify the character class
+				curPos++;
+				token = identifyCharClassToken(); // Identify the indicated character class
+				if (token == null) {
+					/* 
+					 * If the token was null, then a character class could not be identified, 
+					 * so return an invalid character class token.  
+					 */
+					token = new RegexToken(RegexTokenType.INVALID_CHAR_CLASS, line_num, curPos);
+				} else {
+					// If a valid character class, then move the scanning cursor past the character class
+					curPos += token.getValue().length();
+				}
+			} else {
+
+				if (regexCharType == RegexTokenType.RE_CHAR) {
+					// If the current scanning type is RE_CHAR, see if a keyword exist
+					token = identifyRegexKeywordToken();
+				}
+				if (token == null) {
+					// If keyword was not identified, then identify the type of the current character
+					token = identifyCharacterToken(cur_char);
+					curPos++;
+				} else {
+					// If a keyword was identified, move the scanning cursor past the keyword
+					curPos += token.getValue().length();
+				}
+			}
+
+			if (curPos >= regex.length()) {
+				// If scanning cursor past the length of string, set end-of-sting to true
+				EOS = true;
+			}
+		} else {		// not in a regex
+			
+			// If the end of the string has been reached, return an EOS token
+			if (EOS) {
+				return new RegexToken(RegexTokenType.EOS, line_num, curPos);
+			}
+
+			RegexToken token = null;
+
 			// Loop through until a non-whitepsace character is found, or until the end of the string is reached
 			while (curPos < regex.length() && Character.isWhitespace(regex.charAt(curPos))) {
 				curPos++;
@@ -106,89 +286,32 @@ public class RegexScanner {
 				EOS = true;
 				return new RegexToken(RegexTokenType.EOS, line_num, curPos);
 			}
-		}
-		
-		
-		// Get the character at the current scanning position
-		char cur_char = regex.charAt(curPos);
-		
-		if (cur_char == '\\') {
-			// If current character is escape character, then move to the next scanning position
-			curPos++;
-			
-			if (curPos >= regex.length()) {
-				/*
-				 *  If there was no character after the escape character set EOS to true
-				 *  and return an INVALID_ESCAPE token
-				 */
-				this.EOS = true;
-				return new RegexToken(RegexTokenType.INVALID_ESCAPE, line_num, curPos);
-			}
-			
-			if (regexCharType == RegexTokenType.RE_CHAR) {
-				// If the current scanning type is RE_CHAR, see if a keyword exist
-				token = identifyKeywordToken();
-			}
-			
-			if (token == null) {
-				// If a keyword was not found, then set the token with the value of the current character
-				String value = this.regex.substring(curPos, curPos+1);
-				token = new RegexToken(value, regexCharType, line_num, curPos);
-				curPos++; // move the current position to the next location
-			} else {
-				/*
-				 *  If a keyword was found, then break the keyword down
-				 *  to it's individual characters and add those tokens
-				 *  to the token buffer
-				 */
-				String value = token.getValue();
-				// Break down the string into its individual tokens and add them to the token buffer
-				for (int i = 1; i < value.length(); ++i) {
-					tokenBuffer.add(new RegexToken(String.valueOf(value.charAt(i)), regexCharType, line_num, curPos+i));
-				}
-				// Set the current token as the character at the first position in the string
-				token.setValue(String.valueOf(value.charAt(0)));
-				token.setType(regexCharType);
-				token.setLineNumber(line_num);
-				token.setLinePosition(curPos);
-				// Move the current position scanner past the escaped keyword
-				this.curPos += value.length();
-				
-			}
-		} else if (cur_char == '$') {
-			// If the character is the character class identifier, try to identify the character class
-			curPos++;
-			token = identifyCharClassToken(); // Identify the indicated character class
-			if (token == null) {
-				/* 
-				 * If the token was null, then a character class could not be identified, 
-				 * so return an invalid character class token.  
-				 */
-				token = new RegexToken(RegexTokenType.INVALID_CHAR_CLASS, line_num, curPos);
-			} else {
-				// If a valid character class, then move the scanning cursor past the character class
-				curPos += token.getValue().length();
-			}
-		} else {
 
-			if (regexCharType == RegexTokenType.RE_CHAR) {
-				// If the current scanning type is RE_CHAR, see if a keyword exist
-				token = identifyKeywordToken();
-			}
-			if (token == null) {
-				// If keyword was not identified, then identify the type of the current character
-				token = identifyCharacterToken(cur_char);
-				curPos++;
-			} else {
-				// If a keyword was identified, move the scanning cursor past the keyword
-				curPos += token.getValue().length();
-			}
+
+			// Get the character at the current scanning position
+			char cur_char = regex.charAt(curPos);
+
+			if (cur_char == '\\'
+				
+				
+				
+				if (regexCharType == RegexTokenType.RE_CHAR) {
+					// If the current scanning type is RE_CHAR, see if a keyword exist
+					token = identifyRegexKeywordToken();
+				}
+				if (token == null) {
+					// If keyword was not identified, then identify the type of the current character
+					token = identifyCharacterToken(cur_char);
+					curPos++;
+				} else {
+					// If a keyword was identified, move the scanning cursor past the keyword
+					curPos += token.getValue().length();
+				}
+				
+				
+			
 		}
 		
-		if (curPos >= regex.length()) {
-			// If scanning cursor past the length of string, set end-of-sting to true
-			EOS = true;
-		}
 		return token;
 	}
 	
@@ -266,11 +389,11 @@ public class RegexScanner {
 	 * 
 	 * @return the RegexToken representing the identified keyword, or null if a keyword was not found
 	 */
-	private RegexToken identifyKeywordToken() {
+	private RegexToken identifyRegexKeywordToken() {
 		int i = curPos; // Save the current scanning position
 		int str_length = regex.length(); // the overall length of the regex
 		// Loop through all the keywords in the language
-		for (Map.Entry<String, RegexTokenType> entry: this.keywords.entrySet()) {
+		for (Map.Entry<String, RegexTokenType> entry: this.regex_keywords.entrySet()) {
 			String word = entry.getKey(); // get the keyword value
 			// Check to see that the keyword can fit from the current position
 			if ((i + word.length()) <= str_length) {
