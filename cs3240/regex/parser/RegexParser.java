@@ -1,4 +1,14 @@
 package cs3240.regex.parser;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.Hashtable;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Set;
+
+import cs3240.project.Driver;
 import cs3240.regex.ast.AnyCharNode;
 import cs3240.regex.ast.CharClassCollection;
 import cs3240.regex.ast.CharacterSet;
@@ -11,6 +21,7 @@ import cs3240.regex.ast.RegexAstNode;
 import cs3240.regex.ast.SetNode;
 import cs3240.regex.ast.UnionNode;
 import cs3240.regex.ast.ZeroOrMoreRepNode;
+import cs3240.regex.automaton.DFATable;
 import cs3240.regex.automaton.NFA;
 import cs3240.regex.scanner.RegexScanner;
 import cs3240.regex.scanner.token.RegexToken;
@@ -38,6 +49,10 @@ public class RegexParser {
 	 * The collection of currently defined character classes
 	 */
 	private CharClassCollection charClasses;
+	
+	private Hashtable<String, ArrayList<String>> matchLists;
+
+	private Hashtable<String, Integer> integers;
 	/**
 	 * The current token that has been received from the scanner
 	 */
@@ -57,6 +72,97 @@ public class RegexParser {
 		// Create a scanner for the regular expression definition
 		this.scanner = new RegexScanner(regex, charClasses.getClassNames(), line_num);
 		this.charClasses = charClasses;
+	}
+	
+	public void MiniREProgram() throws Exception {
+		match(RegexTokenType.BEGIN_OP);
+		statementList();
+		match(RegexTokenType.END_OP);
+	}
+	
+	public void statementList() {
+		statement();
+		statementListTail();
+	}
+	
+	@SuppressWarnings("unchecked")
+	public void statement() {
+		switch(peek()) {
+			case ID_OP:
+				String ID = match(RegexTokenType.ID_OP).getValue();
+				match(RegexTokenType.EQUALS_OP);
+				switch(peek()) {
+					case POUND:
+						match(RegexTokenType.POUND);
+						integers.put(ID, exp().length());
+					case MAXFREQSTRING_OP:
+						match(RegexTokenType.OPEN_PAR);
+						ArrayList<String> temp = matchLists.get(match(RegexTokenType.ID_OP).getValue());
+						Hashtable<String, Integer> tmp;
+						for (String i : temp) {
+							if (!tmp.containsKey(temp)) {
+								tmp.put(i, 1);
+							} else {
+								tmp.put(i, tmp.get(i) + 1);
+							}
+						}
+						
+						Set<String> set = tmp.keySet();
+						Iterator<String> itr = set.iterator();
+						
+						String maxString = "";
+						int maxInt = 0;
+						while (itr.hasNext()) {
+							String chkstr = itr.next();
+							if (tmp.get(chkstr) > maxInt) {
+								maxString = chkstr;
+								maxInt = tmp.get(chkstr);
+							}
+						}
+						
+						ArrayList<String> l = new ArrayList<String>();
+						l.add(maxString);
+						matchLists.put(ID, l); 
+						
+						match(RegexTokenType.CLOSE_PAR);
+					default:
+						Object variable = exp();
+						if (variable instanceof Integer) {
+							integers.put(ID, (Integer) variable);
+						} else {
+							matchLists.put(ID, (ArrayList<String>) variable);
+						}
+				}
+			case REPLACE_OP:
+				match(RegexTokenType.REPLACE_OP);
+				DFATable regex = parseRegex().toDFA();
+				match(RegexTokenType.WITH_OP);
+				RegexToken tok = matchASCII();
+				match(RegexTokenType.IN_OP);
+				String[] files = filenames();
+				if (files[0] != files[1]) {
+					replaceString(regex, tok, files);
+				} else {
+					throw new Exception("Thou art an idiot! " + files[0] + " = " + files[1] + "! This should not be!");
+				}
+			case RECURSIVE_REPLACE_OP:
+				match(RegexTokenType.REPLACE_OP);
+				DFATable regex2 = parseRegex().toDFA();
+				match(RegexTokenType.WITH_OP);
+				RegexToken tok2 = matchASCII();
+				match(RegexTokenType.IN_OP);
+				String[] files2 = filenames();
+				if (files[0] != files[1]) {
+					while (replaceString(regex, tok, files));
+				} else {
+					throw new Exception("Thou art an idiot! " + files[0] + " = " + files[1] + "! This should not be!");
+				}
+			case INVALID_CHAR_CLASS:
+				throw new Exception(String.format("Line %d (col %d): Invalid Character Class Name", this.token.getLineNumber(), this.token.getLinePosition()));
+			default:
+				throw new Exception(String.format("Line %d (col %d): Regular Expression Parsing Error has occurred", this.token.getLineNumber(), this.token.getLinePosition()));
+		}
+		match(RegexTokenType.SEMICOLON);
 	}
 	
 	/**
@@ -450,6 +556,10 @@ public class RegexParser {
 		}
 	}
 	
+	private RegexToken matchASCII() throws Exception {
+		return scanner.getASCIIToken();
+	}
+	
 	/**
 	 * Calls the scanner to get the next token
 	 */
@@ -475,5 +585,25 @@ public class RegexParser {
 	 */
 	public void setRegex(String regex) {
 		this.regex = regex;
+	}
+	
+	private boolean replaceString(DFATable regex, RegexToken ASCII, String[] files) throws Exception {
+		Driver driver = new Driver(files[0], regex);
+		ArrayList<Driver.Token> tokens = driver.run();
+		
+		if (tokens.size() == 0) return false;
+
+		BufferedReader inputFileReader = new BufferedReader(new FileReader(files[0]));
+		
+		String line = inputFileReader.readLine();
+		String oldLine = line;
+		for (Driver.Token token : tokens) {
+			line.replace(token.getValue(), ASCII.getValue());
+		}
+		
+		if (oldLine == line)
+			throw new Exception("Thou art an idiot! " + ASCII.getValue() + " = " + ASCII.getValue() + "! This should not be!");
+			
+		return true;
 	}
 }
