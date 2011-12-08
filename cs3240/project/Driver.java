@@ -51,11 +51,11 @@ public class Driver {
 	/**
 	 * Analyzes the contents of the code file and attempt 
 	 * to identify the type of token for each of 
-	 * the white-space seperated tokens in the file.
+	 * the white-space separated tokens in the file.
 	 * 
 	 * @throws IOException exception may occur from either file not existing or during reading of the file
 	 */
-	public void run() throws IOException {
+	public ArrayList<Driver.Token> run() throws IOException {
 		// Open a new reader for the file
 		BufferedReader fileReader = new BufferedReader(new FileReader(filename));
 
@@ -71,17 +71,18 @@ public class Driver {
 					++cur_pos;
 				}
 				
+				int temp_pos = cur_pos;
+				Driver.Token oldCandidate = null;
 				// Initialize a string builder to hold the valid characters
 				StringBuilder tokString = new StringBuilder(10);
 				// Loop through until the read of the line is reached or a white-space character is found
-				while (cur_pos < line.length()) {
+				while (temp_pos < line.length()) {
 					char cur_char = line.charAt(cur_pos); // Get the character at the current position
 					if (Character.isWhitespace(cur_char)) {
 						/*
 						 *  If the character is whitespace, then increment the current scanning location
 						 *  and break out of the loop
 						 */
-						++cur_pos;
 						break;
 					} else {
 						if (cur_char == '\\') {
@@ -93,23 +94,35 @@ public class Driver {
 						} else {
 							// Add the non-whitespace character to the string
 							tokString.append(cur_char);
-						} 
-						++cur_pos; // Increment the current scanning location to the next position
+						}
+						
+						String tok = tokString.toString();
+						/*
+						 * If the token string is not empty, then process it
+						 * and add the identified token to the list
+						 */
+						if (!tok.isEmpty()) {
+							Driver.Token candidate = processString(tok); 
+							if (candidate.type == "INVALID") {
+								if (oldCandidate != null) {
+									tokens.add(oldCandidate);
+								}
+								break;
+							} else if (candidate.type != "YOKEL") {
+								oldCandidate = candidate;
+								break;
+							}
+						}
+						
+						++temp_pos; // Increment the current scanning location to the next position
 					}
 				}
 				
-				// Convert the built-string to a string
-				String tok = tokString.toString();
-				/*
-				 * If the token string is not empty, then process it
-				 * and add the identified token to the list
-				 */
-				if (!tok.isEmpty()) {
-					tokens.add(processString(tok));
-				}
+				++cur_pos;
 			}
 			line = fileReader.readLine(); // Read the next line in the file
 		}
+		return tokens;
 	}
 	
 	/**
@@ -151,7 +164,7 @@ public class Driver {
 		String type = dfa.isTerminatingState(cur_id); 
 		if (type == null) {
 			// If the current state is not a terminating state, then set the type to INVALID
-			type = "INVALID";
+			type = "YOKEL";
 		}
 		// Return a token with the given value and type
 		return new Driver.Token(value, type);
@@ -220,7 +233,7 @@ public class Driver {
 	 * @author Dilan Manatunga
 	 *
 	 */
-	private class Token {
+	public class Token {
 		/**
 		 * The value of the token
 		 */
@@ -242,6 +255,9 @@ public class Driver {
 			this.type = type;
 		}
 
+		public String getValue() {
+			return value;
+		}
 		
 		/**
 		 * Returns a string representation of the Token
