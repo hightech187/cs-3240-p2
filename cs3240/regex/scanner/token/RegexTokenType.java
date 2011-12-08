@@ -29,7 +29,23 @@ public enum RegexTokenType {
 	IN_OP,						// IN operator
 	EOS,						// End of Regex String Token
 	INVALID_ESCAPE,				// If an invalid character escape has occurred
-	OTHER;						// OTHER or INVALID type of Token
+	OTHER,						// OTHER or INVALID type of Token
+	EQUALS_OP,
+	POUND,
+	PIPE_OP,
+	COMMA,
+	SEMICOLON,
+	BEGIN_OP,
+	END_OP,
+	REPLACE_OP,
+	RECURSIVE_REPLACE_OP,
+	INTERS_OP,
+	PRINT_OP,
+	WITH_OP,
+	FIND_OP,
+	DIFF_OP,
+	MAXFREQSTRING_OP,
+	ASCIISTR;
 
 	/**
 	 * Returns an English description for the token
