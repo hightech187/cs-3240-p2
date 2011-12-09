@@ -170,7 +170,7 @@ public class RegexParser {
 			case PRINT_OP:
 				match(RegexTokenType.PRINT_OP);
 				match(RegexTokenType.OPEN_PAR);
-				output.concat(expList());
+				output = output.concat(expList());
 				match(RegexTokenType.CLOSE_PAR);
 			case INVALID_CHAR_CLASS:
 				throw new Exception(String.format("Line %d (col %d): Invalid Character Class Name", this.token.getLineNumber(), this.token.getLinePosition()));
@@ -203,11 +203,11 @@ public class RegexParser {
 			retVal = temp.toString();
 		} else {
 			for (String i : (ArrayList<String>) temp) {
-				retVal.concat(i);
+				retVal = retVal.concat(i);
 			}
 		}
 		
-		return retVal.concat(expListTail());
+		return retVal = retVal.concat(expListTail());
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -223,7 +223,7 @@ public class RegexParser {
 			retVal = temp.toString();
 		} else {
 			for (String i : (ArrayList<String>) temp) {
-				retVal.concat(i);
+				retVal = retVal.concat(i);
 			}
 		}
 		

@@ -70,7 +70,7 @@ public class ScannerGen {
 		while (newLine != null) {
 			newLine = fileReader.readLine();
 			if (newLine != null)
-				line.concat("\n" + newLine);
+				line = line.concat("\n" + newLine);
 		}
 		
 		RegexParser parser = new RegexParser(line);
