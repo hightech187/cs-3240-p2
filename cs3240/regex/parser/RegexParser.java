@@ -300,7 +300,6 @@ public class RegexParser {
 		}
 	}
 	
-	@SuppressWarnings("unchecked")
 	public ArrayList<Object> expTail() throws Exception {
 		RegexToken binOp;
 		
