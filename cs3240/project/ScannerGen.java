@@ -65,10 +65,12 @@ public class ScannerGen {
 		// Open the file that is to be scanned
 		BufferedReader fileReader = new BufferedReader(new FileReader(filename));
 		
-		String line = fileReader.readLine() + "\n"; // Read the first line from the file
-		
-		while (line != null) {
-			line.concat(fileReader.readLine() + "\n");
+		String line = fileReader.readLine(); // Read the first line from the file
+		String newLine = "notNull";
+		while (newLine != null) {
+			newLine = fileReader.readLine();
+			if (newLine != null)
+				line.concat("\n" + newLine);
 		}
 		
 		RegexParser parser = new RegexParser(line);
