@@ -12,6 +12,8 @@ import java.util.Set;
 
 import cs3240.project.Driver;
 import cs3240.regex.ast.AnyCharNode;
+import cs3240.regex.ast.CharClassCollection;
+import cs3240.regex.ast.CharacterSet;
 import cs3240.regex.ast.ConcatNode;
 import cs3240.regex.ast.EpsilonNode;
 import cs3240.regex.ast.NegativeSetNode;
@@ -47,6 +49,10 @@ public class RegexParser {
 	 * The scanner for the regular expression definition
 	 */
 	private RegexScanner scanner;
+	/**
+	 * The collection of currently defined character classes
+	 */
+	private CharClassCollection charClasses;
 	
 	private Hashtable<String, ArrayList<String>> matchLists;
 
@@ -65,10 +71,11 @@ public class RegexParser {
 	 * @param charClasses the currently defined set of Character Class
 	 * @param line_num the line number the definition occurred at
 	 */
-	public RegexParser(String regex) {
+	public RegexParser(String regex, CharClassCollection charClasses, int line_num) {
 		this.regex = regex;
 		// Create a scanner for the regular expression definition
-		this.scanner = new RegexScanner(regex);
+		this.scanner = new RegexScanner(regex, charClasses.getClassNames(), line_num);
+		this.charClasses = charClasses;
 	}
 	
 	public void MiniREProgram() throws Exception {
@@ -345,9 +352,14 @@ public class RegexParser {
 	 * @throws Exception if regular expression is not syntactically correct
 	 */
 	public NFA parseRegex() throws Exception {
+		
+		match(RegexTokenType.START_REGEX);
+		
 		RegexAstNode root = RE(); // Build up an Abstract-Syntax Tree representing the regex
 		// Match to the end of string 
-		match(RegexTokenType.EOS);
+		
+		match(RegexTokenType.END_REGEX);
+		
 		// Generate the NFA represented by the root RegexAST Node
 		return root.generateNFA();
 	}
@@ -408,6 +420,7 @@ public class RegexParser {
 		switch (peek()) {
 			case UNION_OP:
 			case CLOSE_PAR:
+			case END_REGEX:
 			case EOS:
 				// Follow characters not part of BASIC_RE, so return epsilon node
 				return new EpsilonNode();
@@ -433,6 +446,7 @@ public class RegexParser {
 		switch (peek()) {
 			case UNION_OP:
 			case CLOSE_PAR:
+			case END_REGEX:
 			case EOS:
 				// Follow characters not part of BASIC_RE, so just return node
 				return leftChild;
@@ -515,6 +529,13 @@ public class RegexParser {
 				match(RegexTokenType.ANY_CHAR);
 				// Create the any character node
 				return new AnyCharNode();
+			case CHAR_CLASS:
+				// A character class
+				tok = match(RegexTokenType.CHAR_CLASS);
+				// Identify the set for the given class name
+				CharacterSet set = charClasses.getCharClassSet(tok.getValue());
+				// Create a set node with the copy of the set
+				return new SetNode(set.copy());
 			case OPEN_BRACKET:
 				match(RegexTokenType.OPEN_BRACKET);
 				// Indicate the scanner should be in SET_CHAR scanning mode
@@ -591,6 +612,15 @@ public class RegexParser {
 		SetNode node;
 		// peek to char class
 		switch (peek()) {
+			case CHAR_CLASS:
+				/* 
+				 * If next token is a character class, then
+				 * return the set representing a 
+				 */
+				RegexToken token = match(RegexTokenType.CHAR_CLASS);
+				CharacterSet set = this.charClasses.getCharClassSet(token.getValue());
+				node = new SetNode(set.copy()); // Return a set node created with a copy of the set
+				return node;
 			case OPEN_BRACKET:
 				/*
 				 * If next token is an open bracket, then parse

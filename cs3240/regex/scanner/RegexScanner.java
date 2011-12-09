@@ -51,6 +51,9 @@ public class RegexScanner {
 	 * An integer indicating the current scanning location
 	 */
 	private int curPos = 0;
+	
+	private int curPosInLine = 0;
+	
 	/**
 	 * An integer indicating the line number for the string
 	 */
@@ -77,10 +80,10 @@ public class RegexScanner {
 	 * @param charClasses a collection of strings which are the names of the valid character classes
 	 * @param line_num the line number the string occurs at
 	 */
-	public RegexScanner(String regex, Collection<String> charClasses, int line_num) {
+	public RegexScanner(String regex, Collection<String> charClasses) {
 		this.regex = regex;
 		this.charClasses = charClasses;
-		this.line_num = line_num;
+		this.line_num = 1;
 		// Initialize the keywords mapping, and add the IN keyword
 		this.keywords = new HashMap<String, RegexTokenType>();
 		this.regex_keywords = new HashMap<String, RegexTokenType>();
@@ -113,9 +116,14 @@ public class RegexScanner {
 	 * @return next available ASCII-STR
 	 */
 	public RegexToken getASCIIToken() {
+		
+		int beginningPos = curPosInLine;
+		
 		// If the end of the string has been reached, return an EOS token
 		if (EOS) {
-			return new RegexToken(RegexTokenType.EOS, line_num, curPos);
+			int oldPosInLine = curPosInLine;
+			curPosInLine = 0;
+			return new RegexToken(RegexTokenType.EOS, line_num++, oldPosInLine);
 		}
 		
 		RegexToken token = null;		
@@ -129,24 +137,30 @@ public class RegexScanner {
 				if (regex.length() > curPos + 1) {		// at least one character following
 					if (regex.charAt(curPos+1) == '"') {
 						tokenValue.append("\"");
+						curPosInLine += 2;
 						curPos += 2;					// move ahead of both \ and "
 					} else {							// nothing being escaped, simply add \
 						tokenValue.append("\\");
 						curPos++;
+						curPosInLine++;
 					}
 				} else {
 					this.EOS = true;
 					curPos++;			// TODO: increment curPos here? vvv I think he does down there...
-					return new RegexToken(RegexTokenType.INVALID_ESCAPE, line_num, curPos);
+					int oldPosInLine = curPosInLine;
+					curPosInLine++;
+					return new RegexToken(RegexTokenType.INVALID_ESCAPE, line_num, oldPosInLine);
 				}
 			} else {
 				if (cur_char == '"') {		// done building ASCI-STR
-					token = new RegexToken(tokenValue.toString(), RegexTokenType.ASCIISTR, line_num, curPos);
+					token = new RegexToken(tokenValue.toString(), RegexTokenType.ASCIISTR, line_num, beginningPos);
 					curPos++;
+					curPosInLine++;
 					done = true;
 				} else {
 					tokenValue.append(cur_char);
 					curPos++;
+					curPosInLine++;
 				}
 			}
 			
@@ -176,7 +190,9 @@ public class RegexScanner {
 
 			// If the end of the string has been reached, return an EOS token
 			if (EOS) {
-				return new RegexToken(RegexTokenType.EOS, line_num, curPos);
+				int oldPos = curPosInLine;
+				curPosInLine = 0;
+				return new RegexToken(RegexTokenType.EOS, line_num++, oldPos);
 			}
 
 			// If whitespace is being ignored, loop until a non-whitespace character is identified
@@ -184,11 +200,14 @@ public class RegexScanner {
 				// Loop through until a non-whitepsace character is found, or until the end of the string is reached
 				while (curPos < regex.length() && Character.isWhitespace(regex.charAt(curPos))) {
 					curPos++;
+					curPosInLine++;
 				}
 				// If the end of string was reached, then set EOS to true and return an EOS token
 				if (curPos >= regex.length()) {
 					EOS = true;
-					return new RegexToken(RegexTokenType.EOS, line_num, curPos);
+					int pos = curPosInLine;
+					curPosInLine = 0;
+					return new RegexToken(RegexTokenType.EOS, line_num++, pos);
 				}
 			}
 
@@ -197,12 +216,14 @@ public class RegexScanner {
 			char cur_char = regex.charAt(curPos);
 
 			if (endRegexOnQuote && cur_char == '\'') {
-				token = new RegexToken("'", RegexTokenType.END_REGEX, line_num, curPos);
+				token = new RegexToken("'", RegexTokenType.END_REGEX, line_num, curPosInLine);
 				inRegex = false;
 				curPos++;
+				curPosInLine++;
 			} else if (cur_char == '\\') {
 				// If current character is escape character, then move to the next scanning position
 				curPos++;
+				curPosInLine++;
 
 				if (curPos >= regex.length()) {
 					/*
@@ -210,7 +231,7 @@ public class RegexScanner {
 					 *  and return an INVALID_ESCAPE token
 					 */
 					this.EOS = true;
-					return new RegexToken(RegexTokenType.INVALID_ESCAPE, line_num, curPos);
+					return new RegexToken(RegexTokenType.INVALID_ESCAPE, line_num, curPosInLine);
 				}
 
 				if (regexCharType == RegexTokenType.RE_CHAR) {
@@ -221,8 +242,9 @@ public class RegexScanner {
 				if (token == null) {
 					// If a keyword was not found, then set the token with the value of the current character
 					String value = this.regex.substring(curPos, curPos+1);
-					token = new RegexToken(value, regexCharType, line_num, curPos);
+					token = new RegexToken(value, regexCharType, line_num, curPosInLine);
 					curPos++; // move the current position to the next location
+					curPosInLine++;
 				} else {
 					/*
 					 *  If a keyword was found, then break the keyword down
@@ -232,30 +254,33 @@ public class RegexScanner {
 					String value = token.getValue();
 					// Break down the string into its individual tokens and add them to the token buffer
 					for (int i = 1; i < value.length(); ++i) {
-						tokenBuffer.add(new RegexToken(String.valueOf(value.charAt(i)), regexCharType, line_num, curPos+i));
+						tokenBuffer.add(new RegexToken(String.valueOf(value.charAt(i)), regexCharType, line_num, curPosInLine+i));
 					}
 					// Set the current token as the character at the first position in the string
 					token.setValue(String.valueOf(value.charAt(0)));
 					token.setType(regexCharType);
 					token.setLineNumber(line_num);
-					token.setLinePosition(curPos);
+					token.setLinePosition(curPosInLine);
 					// Move the current position scanner past the escaped keyword
 					this.curPos += value.length();
+					curPosInLine += value.length();
 
 				}
 			} else if (cur_char == '$') {
 				// If the character is the character class identifier, try to identify the character class
 				curPos++;
+				curPosInLine++;
 				token = identifyCharClassToken(); // Identify the indicated character class
 				if (token == null) {
 					/* 
 					 * If the token was null, then a character class could not be identified, 
 					 * so return an invalid character class token.  
 					 */
-					token = new RegexToken(RegexTokenType.INVALID_CHAR_CLASS, line_num, curPos);
+					token = new RegexToken(RegexTokenType.INVALID_CHAR_CLASS, line_num, curPosInLine);
 				} else {
 					// If a valid character class, then move the scanning cursor past the character class
 					curPos += token.getValue().length();
+					curPosInLine += token.getValue().length();
 				}
 			} else {
 
@@ -273,9 +298,11 @@ public class RegexScanner {
 						endRegexOnQuote = false;
 					
 					curPos++;
+					curPosInLine++;
 				} else {
 					// If a keyword was identified, move the scanning cursor past the keyword
 					curPos += token.getValue().length();
+					curPosInLine += token.getValue().length();
 				}
 			}
 
@@ -288,17 +315,39 @@ public class RegexScanner {
 			
 			// If the end of the string has been reached, return an EOS token
 			if (EOS) {
-				return new RegexToken(RegexTokenType.EOS, line_num, curPos);
+				int oldPosInLine = curPosInLine;
+				curPosInLine = 0;
+				return new RegexToken(RegexTokenType.EOS, line_num++, oldPosInLine);
 			}
 
 			// Loop through until a non-whitepsace character is found, or until the end of the string is reached
-			while (curPos < regex.length() && Character.isWhitespace(regex.charAt(curPos))) {
+			while (curPos < regex.length() && regex.charAt(curPos) != '\n' && Character.isWhitespace(regex.charAt(curPos))) {
 				curPos++;
+				curPosInLine++;
 			}
+
+		
+			
+			// If end of current line, consume \n, update cur_line, and reset curPos
+			if (curPos + 2 <= regex.length()) {
+				char current = regex.charAt(curPos);
+				
+				char next = regex.charAt(curPos+1);
+				if (current == '\n') {		// newline found
+					curPos++;
+					curPosInLine = 0;
+					line_num++;
+				}
+				if (next == '\r') {
+					curPos++;
+				}
+			}
+			
+			
 			// If the end of string was reached, then set EOS to true and return an EOS token
 			if (curPos >= regex.length()) {
 				EOS = true;
-				return new RegexToken(RegexTokenType.EOS, line_num, curPos);
+				return new RegexToken(RegexTokenType.EOS, line_num, curPosInLine);
 			}
 
 
@@ -309,10 +358,11 @@ public class RegexScanner {
 			token = identifyKeywordToken();
 			if (token == null) {		// keyword not identified -- check if ID
 				if (Character.isLetter(cur_char)) {
-					int beginPos = curPos;
+					int beginPos = curPosInLine;
 					do {
 						sb.append(cur_char);
 						curPos++;
+						curPosInLine++;
 						
 						if (curPos >= regex.length()) {
 							this.EOS = true;
@@ -325,8 +375,9 @@ public class RegexScanner {
 					String possibleID = sb.toString();
 					if (possibleID.length() > 10) {
 						token = new RegexToken("ID too long", RegexTokenType.INVALID_TOKEN, line_num, beginPos);
-					} else if (EOS) {
-						token = new RegexToken(sb.toString(), RegexTokenType.ID, line_num, beginPos);
+					} else if (EOS) {	// TODO: maybe reset line here too?
+						curPosInLine = 0;
+						token = new RegexToken(sb.toString(), RegexTokenType.ID, line_num++, beginPos);
 					} else if (!Character.isWhitespace(regex.charAt(curPos)) && cur_char != ')') {	// ID contains something other than letter, digit, or _
 						token = new RegexToken("ID contains invalid characters", RegexTokenType.INVALID_TOKEN, line_num, beginPos);
 					} else {	// valid ID found
@@ -334,18 +385,20 @@ public class RegexScanner {
 					}
 				} else {	// Not an ID or keyword
 					if (cur_char == '\'') {
-						token = new RegexToken("'", RegexTokenType.START_REGEX, line_num, curPos);
+						token = new RegexToken("'", RegexTokenType.START_REGEX, line_num, curPosInLine);
 						inRegex = true;
 					} else if (cur_char == '"') {
-						token = new RegexToken("\"", RegexTokenType.START_ASCII, line_num, curPos);
+						token = new RegexToken("\"", RegexTokenType.START_ASCII, line_num, curPosInLine);
 					} else {
-						token = new RegexToken("Expected ID or keyword", RegexTokenType.INVALID_TOKEN, line_num, curPos);
+						token = new RegexToken("Expected ID or keyword", RegexTokenType.INVALID_TOKEN, line_num, curPosInLine);
 					}
 					curPos++;
+					curPosInLine++;
 				}
 			} else {
 				// If a keyword was identified, move the scanning cursor past the keyword
 				curPos += token.getValue().length();
+				curPosInLine += token.getValue().length();
 			}
 		}
 		
@@ -374,23 +427,23 @@ public class RegexScanner {
 				 */
 				switch (character) {
 					case '.':
-						return new RegexToken(".", RegexTokenType.ANY_CHAR, line_num, curPos);
+						return new RegexToken(".", RegexTokenType.ANY_CHAR, line_num, curPosInLine);
 					case '(':
-						return new RegexToken("(", RegexTokenType.OPEN_PAR, line_num, curPos);
+						return new RegexToken("(", RegexTokenType.OPEN_PAR, line_num, curPosInLine);
 					case ')':
-						return new RegexToken(")", RegexTokenType.CLOSE_PAR, line_num, curPos);
+						return new RegexToken(")", RegexTokenType.CLOSE_PAR, line_num, curPosInLine);
 					case '[':
-						return new RegexToken("[", RegexTokenType.OPEN_BRACKET, line_num, curPos);
+						return new RegexToken("[", RegexTokenType.OPEN_BRACKET, line_num, curPosInLine);
 					case ']':
-						return new RegexToken("]", RegexTokenType.CLOSE_BRACKET, line_num, curPos);
+						return new RegexToken("]", RegexTokenType.CLOSE_BRACKET, line_num, curPosInLine);
 					case '*':
-						return new RegexToken("*", RegexTokenType.ZERO_OR_MORE_REP, line_num, curPos);
+						return new RegexToken("*", RegexTokenType.ZERO_OR_MORE_REP, line_num, curPosInLine);
 					case '+':
-						return new RegexToken("+", RegexTokenType.ONE_OR_MORE_REP, line_num, curPos);
+						return new RegexToken("+", RegexTokenType.ONE_OR_MORE_REP, line_num, curPosInLine);
 					case '|':
-						return new RegexToken("|", RegexTokenType.UNION_OP, line_num, curPos);
+						return new RegexToken("|", RegexTokenType.UNION_OP, line_num, curPosInLine);
 					default:
-						return new RegexToken(String.valueOf(character), RegexTokenType.RE_CHAR, line_num, curPos);
+						return new RegexToken(String.valueOf(character), RegexTokenType.RE_CHAR, line_num, curPosInLine);
 				}
 			case SET_CHAR:
 				/*
@@ -402,18 +455,18 @@ public class RegexScanner {
 				 */
 				switch (character) {
 					case '^':
-						return new RegexToken("^", RegexTokenType.NEGATIVE_SET, line_num, curPos);
+						return new RegexToken("^", RegexTokenType.NEGATIVE_SET, line_num, curPosInLine);
 					case '-':
-						return new RegexToken("-", RegexTokenType.RANGE_OP, line_num, curPos);
+						return new RegexToken("-", RegexTokenType.RANGE_OP, line_num, curPosInLine);
 					case '[':
-						return new RegexToken("[", RegexTokenType.OPEN_BRACKET, line_num, curPos);
+						return new RegexToken("[", RegexTokenType.OPEN_BRACKET, line_num, curPosInLine);
 					case ']':
-						return new RegexToken("]", RegexTokenType.CLOSE_BRACKET, line_num, curPos);
+						return new RegexToken("]", RegexTokenType.CLOSE_BRACKET, line_num, curPosInLine);
 					default:
-						return new RegexToken(String.valueOf(character), RegexTokenType.SET_CHAR, line_num, curPos);
+						return new RegexToken(String.valueOf(character), RegexTokenType.SET_CHAR, line_num, curPosInLine);
 				}
 		}
-		return new RegexToken(RegexTokenType.OTHER, line_num, curPos);
+		return new RegexToken(RegexTokenType.OTHER, line_num, curPosInLine);
 	}
 	
 	private RegexToken identifyKeywordToken() {
@@ -487,7 +540,7 @@ public class RegexScanner {
 						
 						}
 					}
-					return new RegexToken(word, rtt, line_num, curPos);
+					return new RegexToken(word, rtt, line_num, curPosInLine);
 				}
 			}
 			
@@ -528,7 +581,7 @@ public class RegexScanner {
 					 * If the keyword matched the sequence of characters at the 
 					 * current position, then return the representing RegexToken
 					 */
-					return new RegexToken(word, entry.getValue(), line_num, curPos);
+					return new RegexToken(word, entry.getValue(), line_num, curPosInLine);
 				}
 			}
 			
@@ -568,7 +621,7 @@ public class RegexScanner {
 					 * If the character class name matched the sequence of characters at the 
 					 * current position, then return the matching RegexToken
 					 */
-					return new RegexToken(word, RegexTokenType.CHAR_CLASS, line_num, curPos);
+					return new RegexToken(word, RegexTokenType.CHAR_CLASS, line_num, curPosInLine);
 				}
 			}
 		}
@@ -612,26 +665,26 @@ public class RegexScanner {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		String input = "matches = (find) 'REGEX' notRegex \"";	// *NOTE*: last " signals the start of an ASCII-Char
+		String input = "matches = (find) '(REGEX [a-f\'])*'  \n notRegex  \n\"";	// *NOTE*: last " signals the start of an ASCII-Char
 																// (switch to getASCII-Token() next token when tokenType == START_ASCII
 																// the ending " is consumed (never returned)
-		RegexScanner rs = new RegexScanner(input, new java.util.ArrayList<String>(), 1);
+		RegexScanner rs = new RegexScanner(input, new java.util.ArrayList<String>());
 		RegexToken rt;
 		System.out.println("Testing getToken() on: " + input);
 		do {
 			rt = rs.getToken();
 			if (rt != null)
-				System.out.println(RegexTokenType.getTokenDescription(rt) + ": \"" + rt.getValue() + "\" at pos(" + rt.getLinePosition() + ")");
+				System.out.println(RegexTokenType.getTokenDescription(rt) + ": \"" + rt.getValue() + "\" at line(" + rt.getLineNumber() + ") pos(" + rt.getLinePosition() + ")");
 		} while (rt != null && rt.getType() != RegexTokenType.EOS);
 		System.out.println();
 		
 		String input2 = " H3RP my D3RP \"";
 		System.out.println("Testing getASCIIToken() on: " + input2);
-		RegexScanner rs2 = new RegexScanner(input2, new java.util.ArrayList<String>(), 1);
+		RegexScanner rs2 = new RegexScanner(input2, new java.util.ArrayList<String>());
 		do {
 			rt = rs2.getASCIIToken();
 			if (rt != null)
-				System.out.println(RegexTokenType.getTokenDescription(rt) + ": \"" + rt.getValue() + "\" at pos(" + rt.getLinePosition() + ")");
+				System.out.println(RegexTokenType.getTokenDescription(rt) + ": \"" + rt.getValue() + "\" at line(" + rt.getLineNumber() + ") pos(" + rt.getLinePosition() + ")");
 		} while (rt != null && rt.getType() != RegexTokenType.EOS);
 	}
 }
