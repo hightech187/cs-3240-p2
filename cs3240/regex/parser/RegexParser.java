@@ -71,11 +71,10 @@ public class RegexParser {
 	 * @param charClasses the currently defined set of Character Class
 	 * @param line_num the line number the definition occurred at
 	 */
-	public RegexParser(String regex, CharClassCollection charClasses, int line_num) {
+	public RegexParser(String regex) {
 		this.regex = regex;
 		// Create a scanner for the regular expression definition
-		this.scanner = new RegexScanner(regex, charClasses.getClassNames(), line_num);
-		this.charClasses = charClasses;
+		this.scanner = new RegexScanner(regex, charClasses.getClassNames());
 	}
 	
 	public void MiniREProgram() throws Exception {
