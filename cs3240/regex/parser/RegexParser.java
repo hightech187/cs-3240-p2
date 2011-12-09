@@ -12,8 +12,6 @@ import java.util.Set;
 
 import cs3240.project.Driver;
 import cs3240.regex.ast.AnyCharNode;
-import cs3240.regex.ast.CharClassCollection;
-import cs3240.regex.ast.CharacterSet;
 import cs3240.regex.ast.ConcatNode;
 import cs3240.regex.ast.EpsilonNode;
 import cs3240.regex.ast.NegativeSetNode;

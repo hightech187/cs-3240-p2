@@ -1,9 +1,7 @@
 package cs3240.project;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -71,8 +69,9 @@ public class Driver {
 					++cur_pos;
 				}
 				
-				int temp_pos = cur_pos;
-				Driver.Token oldCandidate = null;
+				int temp_pos = cur_pos; // A variable that serves a similar purpose to cur_pos
+				Driver.Token oldCandidate = null; // Candidate for inclusion as a Token 
+				
 				// Initialize a string builder to hold the valid characters
 				StringBuilder tokString = new StringBuilder(10);
 				// Loop through until the read of the line is reached or a white-space character is found
@@ -97,28 +96,35 @@ public class Driver {
 						}
 						
 						String tok = tokString.toString();
-						/*
-						 * If the token string is not empty, then process it
-						 * and add the identified token to the list
-						 */
+						
+						// If the token string is not empty, then process it
 						if (!tok.isEmpty()) {
-							Driver.Token candidate = processString(tok); 
+							// Identify the token string as a candidate 
+							Driver.Token candidate = processString(tok);
+							/*
+							 * If the token is invalid, check to see if the previous token
+							 * was valid. If so, add it to the list of Tokens
+							 */
 							if (candidate.type == "INVALID") {
 								if (oldCandidate != null) {
 									tokens.add(oldCandidate);
 								}
+								oldCandidate = null;
 								break;
+							/*
+							 * If the token is acceptable, save as a candidate token. 
+							 */
 							} else if (candidate.type != "YOKEL") {
 								oldCandidate = candidate;
 								break;
 							}
 						}
 						
-						++temp_pos; // Increment the current scanning location to the next position
+						++temp_pos; // Increment the token scanning location to the next position
 					}
 				}
 				
-				++cur_pos;
+				++cur_pos; // Increment the file scanning location to the next position
 			}
 			line = fileReader.readLine(); // Read the next line in the file
 		}
@@ -163,47 +169,11 @@ public class Driver {
 		 */
 		String type = dfa.isTerminatingState(cur_id); 
 		if (type == null) {
-			// If the current state is not a terminating state, then set the type to INVALID
+			// If the current state is not a terminating state, then set the type to YOKEL
 			type = "YOKEL";
 		}
 		// Return a token with the given value and type
 		return new Driver.Token(value, type);
-	}
-	
-	/**
-	 * Prints the analyzed token data to the console
-	 */
-	public void printStats() {
-		/*
-		 *  Loop through the identified tokens and 
-		 *  print their representations to the console
-		 */
-		for (Driver.Token token: tokens) {
-			System.out.println(token.toString());
-		}
-	}
-	
-	/**
-	 * Prints the analyzed token data to a 
-	 * file with the given name
-	 * 
-	 * @param filename the file name for the token data to file
-	 */
-	public void printStatsToFile(String filename) {
-		try {
-			// Open a buffered writer
-			BufferedWriter writer = new BufferedWriter(new FileWriter(filename));
-			/*
-			 *  Loop through the identified tokens and 
-			 *  print their representations to the file
-			 */
-			for (Driver.Token token: tokens) {
-				writer.write(String.format("%s\n", token));
-			}
-			writer.close();
-		} catch (IOException e) {
-			System.err.format("IOException: %s", e);
-		}	
 	}
 
 	/**
