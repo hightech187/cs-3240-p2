@@ -2,8 +2,6 @@ package cs3240.project;
 
 import java.io.IOException;
 
-import cs3240.regex.automaton.DFATable;
-
 /**
  * This class simply holds the main
  * method for the project, which runs
@@ -45,35 +43,22 @@ public class RegexProject {
 	public static void main(String[] args) {
 		System.out.println("Program Start");
 
-		String spec_filename = "";  // The specification file name
-		String code_filename = "";  // The code file name
-		String dfa_file = "dfa.txt";  // The default name of the file to store the generated DFA
-		String minimalDFA_file = "minimalDFA.txt"; // The default name of the file to store the minimal DFA
-		String tokenStats_file = "tokenStats.txt"; // the default name for the token stats file
-		// Save the inputed file names to the necessary variables
+		String MiniRE_filename = "";  // The code file name
+		// Save the inputed file name to the necessary variable
 		switch (args.length) {
-			case 5:
-				minimalDFA_file = args[5];
-			case 4:
-				dfa_file = args[4];
-			case 3:
-				tokenStats_file = args[3];
-			case 2:
-				spec_filename = args[0];
-				code_filename = args[1];
-				break;
+			case 1:
+				MiniRE_filename = args[0]; break;
 			default:
 				// Not enough arguments provided
-				System.err.println("Please provide at least two arguments:\n\t1. filename of specification file\n\t2. filename of possible tokens file\n\t3. (Optional) Name of the file to store Token Statistics to\n\t4. (Optional) Name of file to store DFA Table\n\t5. (Optional) Name of file to store minimal DFA Table");
+				System.err.println("Please provide a MiniRE code file");
 				return;
 		}
 		
 		// Create a scanner generator for the specification file name
-		ScannerGen scannerGen = new ScannerGen(spec_filename);
-		DFATable dfa = null;
+		ScannerGen scannerGen = new ScannerGen(MiniRE_filename);
 		try {
 			System.out.println("Running Scanner Generator...");
-			dfa = scannerGen.run();  // Run the scanner generator and save the generated DFA
+			scannerGen.run();  // Run the scanner generator
 			System.out.println("Scanner Generation Complete");
 		} catch (IOException e) {
 			System.err.println("IO Exception has occurred while reading specification file.");
@@ -82,59 +67,6 @@ public class RegexProject {
 			System.err.println(e);
 			return;
 		}
-		
-		System.out.println("===========Character Classes==========");
-		// Print out the identified Character Classes
-		scannerGen.printCharClasses();
-		System.out.println("======================================");
-		
-//		System.out.println("===============Regex DFA==============");
-//		// Print out the identified DFA
-//		System.out.print(dfa.toString());
-//		System.out.println("======================================");
-		
-		// Print the DFA Table to a file
-		System.out.println("Printing DFA Table to File...");
-		dfa.printToFile(dfa_file);
-		
-		System.out.println("Converting DFA to Minimal DFA...");
-		// Convert the DFA to its minimal version
-		DFATable minimalDFA = dfa.toMinimalDFA();
-		
-//		System.out.println("==============Minimal DFA=============");
-//		// Print out the minimal DFA
-//		System.out.print(minimalDFA.toString());
-//		System.out.println("======================================");
-
-		// Print the minimal DFA Table to a file
-		System.out.println("Printing Minimal DFA Table to File...");
-		minimalDFA.printToFile(minimalDFA_file);
-		
-		
-		System.out.println("==========DFA vs. Minimal DFA=========");
-		// Print out the DFA size versus the minimal DFA size
-		System.out.format("DFA Size: %d\nMinimal DFA Size: %d\n", dfa.getTableSize(), minimalDFA.getTableSize());
-		System.out.println("======================================");
-		
-		// Create a driver with the given code file name and pass in the minimal DFA table
-		Driver driver = new Driver(code_filename, minimalDFA);
-		try {
-			System.out.println("Running Driver...");
-			driver.run(); // Run the driver to identify token
-			System.out.println("Driver Token Identification Compelete");
-		} catch (IOException e) {
-			System.err.println("IO Exception has occurred while reading file.");
-			return;
-		}
-		
-//		// Print out the stats for Token identification
-//		System.out.println("===============Token IDs==============");
-//		driver.printStats();
-//		System.out.println("======================================");
-		
-		// Print token statistics to file
-		System.out.println("Printing Token Statistics To File...");
-		driver.printStatsToFile(tokenStats_file);
 		
 		System.out.println("Program End");
 
