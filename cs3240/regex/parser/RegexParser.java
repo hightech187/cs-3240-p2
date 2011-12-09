@@ -2,7 +2,9 @@ package cs3240.regex.parser;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Hashtable;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -41,6 +43,8 @@ public class RegexParser {
 	 * A string containing the regular expression definition
 	 */
 	private String regex;
+	
+	private String output = "";
 	/**
 	 * The scanner for the regular expression definition
 	 */
@@ -80,12 +84,12 @@ public class RegexParser {
 		match(RegexTokenType.END_OP);
 	}
 	
-	public void statementList() {
+	public void statementList() throws Exception {
 		statement();
 		statementListTail();
 	}
 	
-	public void statementListTail() {
+	public void statementListTail() throws Exception {
 		if (peek() != RegexTokenType.END_OP) {
 			statement();
 			statementListTail();
@@ -93,10 +97,10 @@ public class RegexParser {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public void statement() {
+	public void statement() throws Exception {
 		switch(peek()) {
-			case ID_OP:
-				String ID = match(RegexTokenType.ID_OP).getValue();
+			case ID:
+				String ID = match(RegexTokenType.ID).getValue();
 				match(RegexTokenType.EQUALS_OP);
 				switch(peek()) {
 					case POUND_OP:
@@ -104,8 +108,8 @@ public class RegexParser {
 						integers.put(ID, ((ArrayList<Integer>) exp()).size());
 					case MAXFREQSTRING_OP:
 						match(RegexTokenType.OPEN_PAR);
-						ArrayList<String> temp = matchLists.get(match(RegexTokenType.ID_OP).getValue());
-						Hashtable<String, Integer> tmp;
+						ArrayList<String> temp = matchLists.get(match(RegexTokenType.ID).getValue());
+						Hashtable<String, Integer> tmp = new Hashtable<String, Integer>();
 						for (String i : temp) {
 							if (!tmp.containsKey(temp)) {
 								tmp.put(i, 1);
@@ -159,15 +163,18 @@ public class RegexParser {
 				RegexToken tok2 = matchASCII();
 				match(RegexTokenType.IN_OP);
 				String[] files2 = filenames();
-				if (files[0] != files[1]) {
-					while (replaceString(regex, tok, files));
+				if (files2[0] != files2[1]) {
+					while (replaceString(regex2, tok2, files2));
 				} else {
-					throw new Exception("Thou art an idiot! " + files[0] + " = " + files[1] + "! This should not be!");
+					throw new Exception("Thou art an idiot! " + files2[0] + " = " + files2[1] + "! This should not be!");
 				}
+			case PRINT_OP:
+				match(RegexTokenType.PRINT_OP);
+				match(RegexTokenType.OPEN_PAR);
+				output.concat(expList());
+				match(RegexTokenType.CLOSE_PAR);
 			case INVALID_CHAR_CLASS:
 				throw new Exception(String.format("Line %d (col %d): Invalid Character Class Name", this.token.getLineNumber(), this.token.getLinePosition()));
-			default:
-				throw new Exception(String.format("Line %d (col %d): Regular Expression Parsing Error has occurred", this.token.getLineNumber(), this.token.getLinePosition()));
 		}
 		match(RegexTokenType.SEMICOLON);
 	}
@@ -189,6 +196,42 @@ public class RegexParser {
 	}
 	
 	@SuppressWarnings("unchecked")
+	public String expList() throws Exception {
+		Object temp = exp();
+		String retVal = "";
+		
+		if (temp instanceof Integer) {
+			retVal = temp.toString();
+		} else {
+			for (String i : (ArrayList<String>) temp) {
+				retVal.concat(i);
+			}
+		}
+		
+		return retVal.concat(expListTail());
+	}
+	
+	@SuppressWarnings("unchecked")
+	public String expListTail() throws Exception {
+		if (peek() != RegexTokenType.COMMA) {
+			return "";
+		}
+		
+		String retVal = match(RegexTokenType.COMMA).getValue();
+		Object temp = exp();
+
+		if (temp instanceof Integer) {
+			retVal = temp.toString();
+		} else {
+			for (String i : (ArrayList<String>) temp) {
+				retVal.concat(i);
+			}
+		}
+		
+		return retVal.concat(expListTail());
+	}
+	
+	@SuppressWarnings("unchecked")
 	public Object exp() throws Exception {
 		switch(peek()) {
 			case OPEN_PAR:
@@ -204,30 +247,40 @@ public class RegexParser {
 					return strings;
 				}
 				
-				switch ((RegexTokenType) binaryOperation.get(0)) {
-					case DIFF_OP:
-						for (String i : (ArrayList<String>) binaryOperation.get(1)) {
-							if (strings.contains(i)) {
-								strings.remove(i);
+				binaryOperation.add(0, strings);
+				
+				while (binaryOperation.size() > 1) {
+					ArrayList<String> term = (ArrayList<String>) binaryOperation.remove(0);
+					RegexToken binOp = (RegexToken) binaryOperation.remove(0);
+					ArrayList<String> tail = (ArrayList<String>) binaryOperation.remove(0);
+					
+					switch (binOp.getType()) {
+						case DIFF_OP:
+							for (String i : tail) {
+								if (term.contains(i)) {
+									term.remove(i);
+								}
 							}
-						}
-					case UNION_OP:
-						for (String i : (ArrayList<String>) binaryOperation.get(1)) {
-							if (!strings.contains(i)) {
-								strings.add(i);
+						case UNION_OP:
+							for (String i : tail) {
+								if (!term.contains(i)) {
+									term.add(i);
+								}
 							}
-						}
-					case INTERS_OP:
-						for (String i : strings) {
-							if (!((ArrayList<String>) binaryOperation.get(1)).contains(i)) {
-								strings.remove(i);
+						case INTERS_OP:
+							for (String i : term) {
+								if (!(tail.contains(i))) {
+									term.remove(i);
+								}
 							}
-						}
+					}
+					
+					binaryOperation.add(term);
 				}
 				
-				return strings;
+				return binaryOperation.remove(0);
 			default:
-				String ID = match(RegexTokenType.ID_OP).getValue();
+				String ID = match(RegexTokenType.ID).getValue();
 				Set<String> set = integers.keySet();
 				Iterator<String> itr = set.iterator();
 				
@@ -249,45 +302,21 @@ public class RegexParser {
 	
 	@SuppressWarnings("unchecked")
 	public ArrayList<Object> expTail() throws Exception {
-		ArrayList<Object> binOp = new ArrayList<Object>();
+		RegexToken binOp;
 		
-		binOp.add(binOp());
+		binOp = binOp();
 		
-		if (binOp.get(0) == null) {
+		if (binOp == null) {
 			return null;
 		}
 		
 		ArrayList<String> strings = term();
 		ArrayList<Object> binaryOperation = expTail();
-		
-		if (binaryOperation == null) {
-			binOp.add(strings);
-			return binOp;
-		}
-		
-		switch ((RegexTokenType) binaryOperation.get(0)) {
-			case DIFF_OP:
-				for (String i : (ArrayList<String>) binaryOperation.get(1)) {
-					if (strings.contains(i)) {
-						strings.remove(i);
-					}
-				}
-			case UNION_OP:
-				for (String i : (ArrayList<String>) binaryOperation.get(1)) {
-					if (!strings.contains(i)) {
-						strings.add(i);
-					}
-				}
-			case INTERS_OP:
-				for (String i : strings) {
-					if (!((ArrayList<String>) binaryOperation.get(1)).contains(i)) {
-						strings.remove(i);
-					}
-				}
-		}
 
-		binOp.add(strings);
-		return binOp;
+		binaryOperation.add(0, strings);
+		binaryOperation.add(0, binOp);
+		
+		return binaryOperation;
 	}
 	
 	public ArrayList<String> term() throws Exception {
@@ -765,7 +794,12 @@ public class RegexParser {
 		
 		if (oldLine == line)
 			throw new Exception("Thou art an idiot! " + ASCII.getValue() + " = " + ASCII.getValue() + "! This should not be!");
-			
+		
+		PrintWriter out = new PrintWriter(new FileWriter(files[1]));
+		
+		out.println(line);
+		out.close();
+		
 		return true;
 	}
 }
