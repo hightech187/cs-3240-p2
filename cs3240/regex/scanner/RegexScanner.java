@@ -100,6 +100,7 @@ public class RegexScanner {
 		this.keywords.put("recursivereplace", RegexTokenType.RECURSIVE_REPLACE_OP);
 		this.keywords.put("union", RegexTokenType.UNION_OP);
 		this.keywords.put("inters", RegexTokenType.INTERS_OP);
+		this.keywords.put("intersec", RegexTokenType.INTERS_OP);
 		this.keywords.put("print", RegexTokenType.PRINT_OP);
 		this.keywords.put("with", RegexTokenType.WITH_OP);
 		this.keywords.put("in", RegexTokenType.IN_OP);
@@ -493,7 +494,7 @@ public class RegexScanner {
 					
 					RegexTokenType rtt = RegexTokenType.INVALID_TOKEN;	// Initialize rtt to arbitrary type
 					
-					if (word.equals("inters"))
+					if (word.equals("inters") || word.equals("intersec"))
 						rtt = RegexTokenType.INTERS_OP;
 					else if (word.equals("replace"))
 						rtt = RegexTokenType.REPLACE_OP;

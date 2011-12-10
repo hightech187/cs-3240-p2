@@ -12,8 +12,6 @@ import java.util.Set;
 
 import cs3240.project.Driver;
 import cs3240.regex.ast.AnyCharNode;
-import cs3240.regex.ast.CharClassCollection;
-import cs3240.regex.ast.CharacterSet;
 import cs3240.regex.ast.ConcatNode;
 import cs3240.regex.ast.EpsilonNode;
 import cs3240.regex.ast.NegativeSetNode;
@@ -50,7 +48,7 @@ public class RegexParser {
 	 */
 	private RegexScanner scanner;
 	
-	private Hashtable<String, ArrayList<String>> matchLists;
+	private Hashtable<String, ArrayList<String>> matchLists = new Hashtable<String, ArrayList<String>>();
 
 	private Hashtable<String, Integer> integers;
 	/**
@@ -101,6 +99,7 @@ public class RegexParser {
 					case POUND_OP:
 						match(RegexTokenType.POUND_OP);
 						integers.put(ID, ((ArrayList<Integer>) exp()).size());
+						break;
 					case MAXFREQSTRING_OP:
 						match(RegexTokenType.OPEN_PAR);
 						ArrayList<String> temp = matchLists.get(match(RegexTokenType.ID).getValue());
@@ -131,6 +130,7 @@ public class RegexParser {
 						matchLists.put(ID, l); 
 						
 						match(RegexTokenType.CLOSE_PAR);
+						break;
 					default:
 						Object variable = exp();
 						if (variable instanceof Integer) {
@@ -139,6 +139,7 @@ public class RegexParser {
 							matchLists.put(ID, (ArrayList<String>) variable);
 						}
 				}
+				break;
 			case REPLACE_OP:
 				match(RegexTokenType.REPLACE_OP);
 				DFATable regex = parseRegex().toDFA();
@@ -152,6 +153,7 @@ public class RegexParser {
 				} else {
 					throw new Exception("Thou art an idiot! " + files[0] + " = " + files[1] + "! This should not be!");
 				}
+				break;
 			case RECURSIVE_REPLACE_OP:
 				match(RegexTokenType.REPLACE_OP);
 				DFATable regex2 = parseRegex().toDFA();
@@ -165,11 +167,13 @@ public class RegexParser {
 				} else {
 					throw new Exception("Thou art an idiot! " + files2[0] + " = " + files2[1] + "! This should not be!");
 				}
+				break;
 			case PRINT_OP:
 				match(RegexTokenType.PRINT_OP);
 				match(RegexTokenType.OPEN_PAR);
 				output = output.concat(expList());
 				match(RegexTokenType.CLOSE_PAR);
+				break;
 			case INVALID_CHAR_CLASS:
 				throw new Exception(String.format("Line %d (col %d): Invalid Character Class Name", this.token.getLineNumber(), this.token.getLinePosition()));
 		}
@@ -260,12 +264,14 @@ public class RegexParser {
 									term.remove(i);
 								}
 							}
+							break;
 						case UNION_OP:
 							for (String i : tail) {
 								if (!term.contains(i)) {
 									term.add(i);
 								}
 							}
+							break;
 						case INTERS_OP:
 							for (String i : term) {
 								if (!(tail.contains(i))) {
