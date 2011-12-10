@@ -76,52 +76,45 @@ public class Driver {
 				StringBuilder tokString = new StringBuilder(10);
 				// Loop through until the read of the line is reached or a white-space character is found
 				while (temp_pos < line.length()) {
-					char cur_char = line.charAt(cur_pos); // Get the character at the current position
-					if (Character.isWhitespace(cur_char)) {
+					char cur_char = line.charAt(temp_pos); // Get the character at the current position
+					if (cur_char == '\\') {
 						/*
-						 *  If the character is whitespace, then increment the current scanning location
-						 *  and break out of the loop
+						 * If the character is the escape character, then add the
+						 * character at the next position
 						 */
-						break;
+						tokString.append(line.charAt(++cur_pos));
 					} else {
-						if (cur_char == '\\') {
-							/*
-							 * If the character is the escape character, then add the
-							 * character at the next position
-							 */
-							tokString.append(line.charAt(++cur_pos));
-						} else {
-							// Add the non-whitespace character to the string
-							tokString.append(cur_char);
-						}
-						
-						String tok = tokString.toString();
-						
-						// If the token string is not empty, then process it
-						if (!tok.isEmpty()) {
-							// Identify the token string as a candidate 
-							Driver.Token candidate = processString(tok);
-							/*
-							 * If the token is invalid, check to see if the previous token
-							 * was valid. If so, add it to the list of Tokens
-							 */
-							if (candidate.type == "INVALID") {
-								if (oldCandidate != null) {
-									tokens.add(oldCandidate);
-								}
-								oldCandidate = null;
-								break;
-							/*
-							 * If the token is acceptable, save as a candidate token. 
-							 */
-							} else if (candidate.type != "YOKEL") {
-								oldCandidate = candidate;
-								break;
-							}
-						}
-						
-						++temp_pos; // Increment the token scanning location to the next position
+						// Add the non-whitespace character to the string
+						tokString.append(cur_char);
 					}
+					
+					String tok = tokString.toString();
+
+					// If the token string is not empty, then process it
+					if (!tok.isEmpty()) {
+						// Identify the token string as a candidate 
+						Driver.Token candidate = processString(tok);
+						/*
+						 * If the token is invalid, check to see if the previous token
+						 * was valid. If so, add it to the list of Tokens
+						 */
+						if (candidate.type == "INVALID" || temp_pos == line.length() - 1) {
+							if (oldCandidate != null) {
+								tokens.add(oldCandidate);
+								cur_pos = temp_pos;
+							}
+							oldCandidate = null;
+							break;
+						/*
+						 * If the token is acceptable, save as a candidate token. 
+						 */
+						} else if (candidate.type != "YOKEL") {
+							oldCandidate = candidate;
+						}
+					}
+
+					++temp_pos; // Increment the token scanning location to the next position
+
 				}
 				
 				++cur_pos; // Increment the file scanning location to the next position

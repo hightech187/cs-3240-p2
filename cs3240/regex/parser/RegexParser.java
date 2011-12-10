@@ -361,7 +361,9 @@ public class RegexParser {
 		match(RegexTokenType.END_REGEX);
 		
 		// Generate the NFA represented by the root RegexAST Node
-		return root.generateNFA();
+		NFA nfa = root.generateNFA();
+		nfa.setTerminatingStatesType("Go to Hell!");
+		return nfa;
 	}
 	
 	/**
