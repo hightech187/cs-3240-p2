@@ -80,9 +80,8 @@ public class RegexScanner {
 	 * @param charClasses a collection of strings which are the names of the valid character classes
 	 * @param line_num the line number the string occurs at
 	 */
-	public RegexScanner(String regex, Collection<String> charClasses) {
+	public RegexScanner(String regex) {
 		this.regex = regex;
-		this.charClasses = charClasses;
 		this.line_num = 1;
 		// Initialize the keywords mapping, and add the IN keyword
 		this.keywords = new HashMap<String, RegexTokenType>();
@@ -668,7 +667,7 @@ public class RegexScanner {
 		String input = "matches = (find) '(REGEX [a-f\'])*'  \n notRegex  \n\"";	// *NOTE*: last " signals the start of an ASCII-Char
 																// (switch to getASCII-Token() next token when tokenType == START_ASCII
 																// the ending " is consumed (never returned)
-		RegexScanner rs = new RegexScanner(input, new java.util.ArrayList<String>());
+		RegexScanner rs = new RegexScanner(input);
 		RegexToken rt;
 		System.out.println("Testing getToken() on: " + input);
 		do {
@@ -680,7 +679,7 @@ public class RegexScanner {
 		
 		String input2 = " H3RP my D3RP \"";
 		System.out.println("Testing getASCIIToken() on: " + input2);
-		RegexScanner rs2 = new RegexScanner(input2, new java.util.ArrayList<String>());
+		RegexScanner rs2 = new RegexScanner(input2);
 		do {
 			rt = rs2.getASCIIToken();
 			if (rt != null)
