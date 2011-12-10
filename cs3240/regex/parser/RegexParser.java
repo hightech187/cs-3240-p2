@@ -49,10 +49,6 @@ public class RegexParser {
 	 * The scanner for the regular expression definition
 	 */
 	private RegexScanner scanner;
-	/**
-	 * The collection of currently defined character classes
-	 */
-	private CharClassCollection charClasses;
 	
 	private Hashtable<String, ArrayList<String>> matchLists;
 
@@ -74,7 +70,7 @@ public class RegexParser {
 	public RegexParser(String regex) {
 		this.regex = regex;
 		// Create a scanner for the regular expression definition
-		this.scanner = new RegexScanner(regex, charClasses.getClassNames());
+		this.scanner = new RegexScanner(regex);
 	}
 	
 	public void MiniREProgram() throws Exception {
@@ -528,13 +524,6 @@ public class RegexParser {
 				match(RegexTokenType.ANY_CHAR);
 				// Create the any character node
 				return new AnyCharNode();
-			case CHAR_CLASS:
-				// A character class
-				tok = match(RegexTokenType.CHAR_CLASS);
-				// Identify the set for the given class name
-				CharacterSet set = charClasses.getCharClassSet(tok.getValue());
-				// Create a set node with the copy of the set
-				return new SetNode(set.copy());
 			case OPEN_BRACKET:
 				match(RegexTokenType.OPEN_BRACKET);
 				// Indicate the scanner should be in SET_CHAR scanning mode
@@ -611,15 +600,6 @@ public class RegexParser {
 		SetNode node;
 		// peek to char class
 		switch (peek()) {
-			case CHAR_CLASS:
-				/* 
-				 * If next token is a character class, then
-				 * return the set representing a 
-				 */
-				RegexToken token = match(RegexTokenType.CHAR_CLASS);
-				CharacterSet set = this.charClasses.getCharClassSet(token.getValue());
-				node = new SetNode(set.copy()); // Return a set node created with a copy of the set
-				return node;
 			case OPEN_BRACKET:
 				/*
 				 * If next token is an open bracket, then parse
