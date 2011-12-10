@@ -55,7 +55,7 @@ public class Driver {
 	 */
 	public ArrayList<Driver.Token> run() throws IOException {
 		// Open a new reader for the file
-		BufferedReader fileReader = new BufferedReader(new FileReader(filename));
+		BufferedReader fileReader = new BufferedReader(new FileReader("tests/" + filename));
 
 		String line = fileReader.readLine(); // Read the first file of the line
 		// Continue processing the file till the end of the file is reached
