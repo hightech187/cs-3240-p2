@@ -143,6 +143,7 @@ public class RegexParser {
 				match(RegexTokenType.REPLACE_OP);
 				DFATable regex = parseRegex().toDFA();
 				match(RegexTokenType.WITH_OP);
+				match(RegexTokenType.START_ASCII);
 				RegexToken tok = matchASCII();
 				match(RegexTokenType.IN_OP);
 				String[] files = filenames();
@@ -155,6 +156,7 @@ public class RegexParser {
 				match(RegexTokenType.REPLACE_OP);
 				DFATable regex2 = parseRegex().toDFA();
 				match(RegexTokenType.WITH_OP);
+				match(RegexTokenType.START_ASCII);
 				RegexToken tok2 = matchASCII();
 				match(RegexTokenType.IN_OP);
 				String[] files2 = filenames();
@@ -183,10 +185,12 @@ public class RegexParser {
 	}
 	
 	public String sourceFile() throws Exception {
+		match(RegexTokenType.START_ASCII);
 		return matchASCII().getValue();
 	}
 	
 	public String destinationFile() throws Exception {
+		match(RegexTokenType.START_ASCII);
 		return matchASCII().getValue();
 	}
 	
@@ -322,6 +326,7 @@ public class RegexParser {
 	}
 	
 	public String filename() throws Exception {
+		match(RegexTokenType.START_ASCII);
 		return matchASCII().getValue();
 	}
 	
