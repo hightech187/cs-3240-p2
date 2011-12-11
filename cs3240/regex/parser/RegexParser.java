@@ -246,11 +246,11 @@ public class RegexParser {
 	public Object exp() throws Exception {
 		switch(peek()) {
 			case OPEN_PAR:
-//				match(RegexTokenType.OPEN_PAR);
-//				Object o = exp();
-//				match(RegexTokenType.CLOSE_PAR);
-//				return o;
-//			case FIND_OP:
+				match(RegexTokenType.OPEN_PAR);
+				Object o = exp();
+				match(RegexTokenType.CLOSE_PAR);
+				return o;
+			case FIND_OP:
 				ArrayList<String> strings = term();
 				
 //				match(RegexTokenType.CLOSE_PAR);
@@ -329,14 +329,14 @@ public class RegexParser {
 	
 	public ArrayList<String> term() throws Exception {
 		
-		match(RegexTokenType.OPEN_PAR);
+		//match(RegexTokenType.OPEN_PAR);
 		
 		match(RegexTokenType.FIND_OP);
 		DFATable regex = parseRegex().toDFA();
 		match(RegexTokenType.IN_OP);
 		String filename = filename();
 		
-		match(RegexTokenType.CLOSE_PAR);
+		//match(RegexTokenType.CLOSE_PAR);
 		
 		return findString(regex, filename);
 	}
@@ -807,7 +807,7 @@ public class RegexParser {
 		if (oldLine == line)
 			throw new Exception("Thou art an idiot! " + ASCII.getValue() + " = " + ASCII.getValue() + "! This should not be!");
 		
-		PrintWriter out = new PrintWriter(new FileWriter(files[1]));
+		PrintWriter out = new PrintWriter(new FileWriter("tests/" + files[1]));
 		
 		out.println(line);
 		out.close();
