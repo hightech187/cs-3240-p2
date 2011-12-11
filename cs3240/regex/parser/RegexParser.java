@@ -49,8 +49,6 @@ public class RegexParser {
 	
 	private Hashtable<String, Object> varList = new Hashtable<String, Object>();
 	
-//	private Hashtable<String, ArrayList<String>> matchLists = new Hashtable<String, ArrayList<String>>();
-//	private Hashtable<String, Integer> integers = new Hashtable<String, Integer>();
 	/**
 	 * The current token that has been received from the scanner
 	 */
@@ -141,12 +139,6 @@ public class RegexParser {
 						Object variable = exp();
 						
 						varList.put(ID, variable);
-						
-//						if (variable instanceof Integer) {
-//							integers.put(ID, (Integer) variable);
-//						} else {
-//							varList.put(ID, (ArrayList<String>) variable);
-//						}
 				}
 				break;
 			case REPLACE_OP:
@@ -306,25 +298,9 @@ public class RegexParser {
 				return binaryOperation.remove(0);
 			default:
 				String ID = match(RegexTokenType.ID).getValue();
-//				Set<String> set = varList.keySet();
 				
 				if (varList.containsKey(ID))
 					return varList.get(ID);
-				
-				
-//				Iterator<String> itr = set.iterator();
-//				
-//				while (itr.hasNext()) {
-//					if (itr.next() == ID) {
-//						return varList.get(ID);
-//					}
-//				}
-//				
-//				while (itr.hasNext()) {
-//					if (itr.next() == ID) {
-//						return varList.get(ID);
-//					}
-//				}
 				
 				throw new Exception("The ID value " + ID + " isn't a known variable..");
 		}
@@ -820,8 +796,12 @@ public class RegexParser {
 		
 		String line = inputFileReader.readLine();
 		String oldLine = line;
+		String[] splitter = new String[2];
 		for (Driver.Token token : tokens) {
-			line = line.replace(token.getValue(), ASCII.getValue());
+			splitter = line.split(token.getValue(), 2);
+			line = splitter[0] + ASCII.getValue();
+			if (splitter.length > 1)
+				line += splitter[1];
 		}
 		
 		if (oldLine == line)
