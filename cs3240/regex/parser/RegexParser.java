@@ -792,7 +792,7 @@ public class RegexParser {
 		
 		if (tokens.size() == 0) return false;
 
-		BufferedReader inputFileReader = new BufferedReader(new FileReader(files[0]));
+		BufferedReader inputFileReader = new BufferedReader(new FileReader("tests/" + files[0]));
 		
 		String line = inputFileReader.readLine();
 		String oldLine = line;
