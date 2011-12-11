@@ -136,7 +136,7 @@ public enum RegexTokenType {
 			
 			
 			default:
-				return "INVALID Token";
+				return token.getType().toString();
 		}
 	}
 	

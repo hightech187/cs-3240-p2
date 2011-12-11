@@ -100,7 +100,6 @@ public class RegexScanner {
 		this.keywords.put("recursivereplace", RegexTokenType.RECURSIVE_REPLACE_OP);
 		this.keywords.put("union", RegexTokenType.UNION_OP);
 		this.keywords.put("inters", RegexTokenType.INTERS_OP);
-		this.keywords.put("intersec", RegexTokenType.INTERS_OP);
 		this.keywords.put("print", RegexTokenType.PRINT_OP);
 		this.keywords.put("with", RegexTokenType.WITH_OP);
 		this.keywords.put("in", RegexTokenType.IN_OP);
@@ -378,7 +377,7 @@ public class RegexScanner {
 					} else if (EOS) {	// TODO: maybe reset line here too?
 						curPosInLine = 0;
 						token = new RegexToken(sb.toString(), RegexTokenType.ID, line_num++, beginPos);
-					} else if (!Character.isWhitespace(regex.charAt(curPos)) && cur_char != ')') {	// ID contains something other than letter, digit, or _
+					} else if (!Character.isWhitespace(regex.charAt(curPos)) && cur_char != ')' && cur_char != ';') {	// ID contains something other than letter, digit, or _
 						token = new RegexToken("ID contains invalid characters", RegexTokenType.INVALID_TOKEN, line_num, beginPos);
 					} else {	// valid ID found
 						token = new RegexToken(sb.toString(), RegexTokenType.ID, line_num, beginPos);
@@ -483,6 +482,14 @@ public class RegexScanner {
 					if (regex.charAt(i + ind) != word.charAt(ind)) {
 						match = false;
 						break;
+					}
+				}
+				
+				if (match && word.equals("in")) {	// check if keywork is actually 'intersec' || 'inters'
+					if (i + 3 <= str_length) {
+						if (regex.charAt(i + 2) == 't') {
+							match = false;
+						}
 					}
 				}
 				

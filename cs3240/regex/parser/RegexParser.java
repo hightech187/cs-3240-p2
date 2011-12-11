@@ -42,15 +42,15 @@ public class RegexParser {
 	 */
 	private String regex;
 	
-	private String output = "";
 	/**
 	 * The scanner for the regular expression definition
 	 */
 	private RegexScanner scanner;
 	
-	private Hashtable<String, ArrayList<String>> matchLists = new Hashtable<String, ArrayList<String>>();
-
-	private Hashtable<String, Integer> integers;
+	private Hashtable<String, Object> varList = new Hashtable<String, Object>();
+	
+//	private Hashtable<String, ArrayList<String>> matchLists = new Hashtable<String, ArrayList<String>>();
+//	private Hashtable<String, Integer> integers = new Hashtable<String, Integer>();
 	/**
 	 * The current token that has been received from the scanner
 	 */
@@ -98,11 +98,17 @@ public class RegexParser {
 				switch(peek()) {
 					case POUND_OP:
 						match(RegexTokenType.POUND_OP);
-						integers.put(ID, ((ArrayList<Integer>) exp()).size());
+						
+						Object obj = exp();
+						
+						if (obj instanceof Integer)
+							varList.put(ID, (Integer) obj);
+						else
+							varList.put(ID, ((ArrayList<Integer>) obj).size());
 						break;
 					case MAXFREQSTRING_OP:
 						match(RegexTokenType.OPEN_PAR);
-						ArrayList<String> temp = matchLists.get(match(RegexTokenType.ID).getValue());
+						ArrayList<String> temp = (ArrayList<String>) varList.get(match(RegexTokenType.ID).getValue());
 						Hashtable<String, Integer> tmp = new Hashtable<String, Integer>();
 						for (String i : temp) {
 							if (!tmp.containsKey(temp)) {
@@ -127,17 +133,20 @@ public class RegexParser {
 						
 						ArrayList<String> l = new ArrayList<String>();
 						l.add(maxString);
-						matchLists.put(ID, l); 
+						varList.put(ID, l); 
 						
 						match(RegexTokenType.CLOSE_PAR);
 						break;
 					default:
 						Object variable = exp();
-						if (variable instanceof Integer) {
-							integers.put(ID, (Integer) variable);
-						} else {
-							matchLists.put(ID, (ArrayList<String>) variable);
-						}
+						
+						varList.put(ID, variable);
+						
+//						if (variable instanceof Integer) {
+//							integers.put(ID, (Integer) variable);
+//						} else {
+//							varList.put(ID, (ArrayList<String>) variable);
+//						}
 				}
 				break;
 			case REPLACE_OP:
@@ -171,11 +180,18 @@ public class RegexParser {
 			case PRINT_OP:
 				match(RegexTokenType.PRINT_OP);
 				match(RegexTokenType.OPEN_PAR);
-				output = output.concat(expList());
+				System.out.println(expList());
 				match(RegexTokenType.CLOSE_PAR);
 				break;
 			case INVALID_CHAR_CLASS:
 				throw new Exception(String.format("Line %d (col %d): Invalid Character Class Name", this.token.getLineNumber(), this.token.getLinePosition()));
+			default:
+				
+				if (token == null) {
+					getNextToken();
+				}
+				
+				throw new Exception("An error occurred @ line " + token.getLineNumber() + " (col " + token.getLinePosition() + "): " + token.getValue());
 		}
 		match(RegexTokenType.SEMICOLON);
 	}
@@ -238,12 +254,15 @@ public class RegexParser {
 	public Object exp() throws Exception {
 		switch(peek()) {
 			case OPEN_PAR:
-				match(RegexTokenType.OPEN_PAR);
-				Object o = exp();
-				match(RegexTokenType.CLOSE_PAR);
-				return o;
-			case FIND_OP:
+//				match(RegexTokenType.OPEN_PAR);
+//				Object o = exp();
+//				match(RegexTokenType.CLOSE_PAR);
+//				return o;
+//			case FIND_OP:
 				ArrayList<String> strings = term();
+				
+//				match(RegexTokenType.CLOSE_PAR);
+				
 				ArrayList<Object> binaryOperation = expTail();
 				
 				if (binaryOperation == null) {
@@ -273,7 +292,8 @@ public class RegexParser {
 							}
 							break;
 						case INTERS_OP:
-							for (String i : term) {
+							ArrayList<String> tmp = (ArrayList<String>) term.clone();
+							for (String i : tmp) {
 								if (!(tail.contains(i))) {
 									term.remove(i);
 								}
@@ -286,22 +306,27 @@ public class RegexParser {
 				return binaryOperation.remove(0);
 			default:
 				String ID = match(RegexTokenType.ID).getValue();
-				Set<String> set = integers.keySet();
-				Iterator<String> itr = set.iterator();
+//				Set<String> set = varList.keySet();
 				
-				while (itr.hasNext()) {
-					if (itr.next() == ID) {
-						return integers.get(ID);
-					}
-				}
+				if (varList.containsKey(ID))
+					return varList.get(ID);
 				
-				while (itr.hasNext()) {
-					if (itr.next() == ID) {
-						return integers.get(ID);
-					}
-				}
 				
-				throw new Exception("The ID value " + ID + " isn't a thing. Try again.");
+//				Iterator<String> itr = set.iterator();
+//				
+//				while (itr.hasNext()) {
+//					if (itr.next() == ID) {
+//						return varList.get(ID);
+//					}
+//				}
+//				
+//				while (itr.hasNext()) {
+//					if (itr.next() == ID) {
+//						return varList.get(ID);
+//					}
+//				}
+				
+				throw new Exception("The ID value " + ID + " isn't a known variable..");
 		}
 	}
 	
@@ -316,6 +341,9 @@ public class RegexParser {
 		
 		ArrayList<String> strings = term();
 		ArrayList<Object> binaryOperation = expTail();
+		
+		if (binaryOperation == null)
+			binaryOperation = new ArrayList<Object>();
 
 		binaryOperation.add(0, strings);
 		binaryOperation.add(0, binOp);
@@ -324,10 +352,16 @@ public class RegexParser {
 	}
 	
 	public ArrayList<String> term() throws Exception {
+		
+		match(RegexTokenType.OPEN_PAR);
+		
 		match(RegexTokenType.FIND_OP);
 		DFATable regex = parseRegex().toDFA();
 		match(RegexTokenType.IN_OP);
 		String filename = filename();
+		
+		match(RegexTokenType.CLOSE_PAR);
+		
 		return findString(regex, filename);
 	}
 	
@@ -787,7 +821,7 @@ public class RegexParser {
 		String line = inputFileReader.readLine();
 		String oldLine = line;
 		for (Driver.Token token : tokens) {
-			line.replace(token.getValue(), ASCII.getValue());
+			line = line.replace(token.getValue(), ASCII.getValue());
 		}
 		
 		if (oldLine == line)
