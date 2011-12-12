@@ -100,6 +100,7 @@ public class RegexScanner {
 		this.keywords.put("recursivereplace", RegexTokenType.RECURSIVE_REPLACE_OP);
 		this.keywords.put("union", RegexTokenType.UNION_OP);
 		this.keywords.put("inters", RegexTokenType.INTERS_OP);
+		this.keywords.put("intersec", RegexTokenType.INTERS_OP);
 		this.keywords.put("print", RegexTokenType.PRINT_OP);
 		this.keywords.put("with", RegexTokenType.WITH_OP);
 		this.keywords.put("in", RegexTokenType.IN_OP);
@@ -320,7 +321,7 @@ public class RegexScanner {
 			}
 
 			// Loop through until a non-whitepsace character is found, or until the end of the string is reached
-			while (curPos < regex.length() && regex.charAt(curPos) != '\n' && Character.isWhitespace(regex.charAt(curPos))) {
+			while (curPos < regex.length() && (regex.charAt(curPos) != '\n') && Character.isWhitespace(regex.charAt(curPos))) {
 				curPos++;
 				curPosInLine++;
 			}
@@ -485,9 +486,17 @@ public class RegexScanner {
 					}
 				}
 				
-				if (match && word.equals("in")) {	// check if keywork is actually 'intersec' || 'inters'
+				if (match && word.equals("in")) {	// check if keyword is actually 'intersec' || 'inters'
 					if (i + 3 <= str_length) {
 						if (regex.charAt(i + 2) == 't') {
+							match = false;
+						}
+					}
+				}
+				
+				if (match && word.equals("inters")) {	// check if keyword is actually 'intersec'
+					if (i + 3 <= str_length) {
+						if (regex.charAt(i + 6) == 'e') {
 							match = false;
 						}
 					}
