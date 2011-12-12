@@ -818,7 +818,7 @@ public class RegexParser {
 		
 		if (tokens.size() == 0) return false;
 
-		BufferedReader inputFileReader = new BufferedReader(new FileReader("tests/" + files[0]));
+		BufferedReader inputFileReader = new BufferedReader(new FileReader("src/" + files[0]));
 		
 		String line = inputFileReader.readLine();
 		String oldLine = line;
@@ -835,7 +835,7 @@ public class RegexParser {
 		
 		inputFileReader.close();
 		
-		PrintWriter out = new PrintWriter(new FileWriter("tests/" + files[1]));
+		PrintWriter out = new PrintWriter(new FileWriter("src/" + files[1]));
 		
 		out.println(line);
 		out.close();
