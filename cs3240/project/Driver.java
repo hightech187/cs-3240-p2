@@ -96,9 +96,9 @@ public class Driver {
 						Driver.Token candidate = processString(tok);
 						/*
 						 * If the token is invalid, check to see if the previous token
-						 * was valid. If so, add it to the list of Tokens
+						 * was valid. If so, add it to the list of tokens.
 						 */
-						if (candidate.type == "INVALID" || temp_pos == line.length() - 1) {
+						if (candidate.type == "INVALID") {
 							if (oldCandidate != null) {
 								tokens.add(oldCandidate);
 								cur_pos = temp_pos;
@@ -106,8 +106,14 @@ public class Driver {
 							oldCandidate = null;
 							break;
 						/*
-						 * If the token is acceptable, save as a candidate token. 
+						 * If the token is valid, and the end of the file/line has been
+						 * reached, add candidate to the list of tokens.
 						 */
+						} else if (temp_pos == line.length() - 1 && candidate.type != "YOKEL") {
+							tokens.add(candidate);
+							cur_pos = temp_pos;
+							break;
+						// If the token is acceptable, save as a candidate token.
 						} else if (candidate.type != "YOKEL") {
 							oldCandidate = candidate;
 						}
