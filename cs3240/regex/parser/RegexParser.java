@@ -69,17 +69,32 @@ public class RegexParser {
 		this.scanner = new RegexScanner(regex);
 	}
 	
+	/**
+	 * Corresponds to the equivalent function in the grammar.
+	 * 
+	 * @throws Exception
+	 */
 	public void MiniREProgram() throws Exception {
 		match(RegexTokenType.BEGIN_OP);
 		statementList();
 		match(RegexTokenType.END_OP);
 	}
 	
+	/**
+	 * Corresponds to the equivalent function in the grammar.
+	 * 
+	 * @throws Exception
+	 */
 	public void statementList() throws Exception {
 		statement();
 		statementListTail();
 	}
 	
+	/**
+	 * Corresponds to the equivalent function in the grammar.
+	 * 
+	 * @throws Exception
+	 */
 	public void statementListTail() throws Exception {
 		if (peek() != RegexTokenType.END_OP) {
 			statement();
@@ -87,6 +102,11 @@ public class RegexParser {
 		}
 	}
 	
+	/**
+	 * Corresponds to the equivalent function in the grammar.
+	 * 
+	 * @throws Exception
+	 */
 	@SuppressWarnings("unchecked")
 	public void statement() throws Exception {
 		switch(peek()) {
@@ -156,7 +176,7 @@ public class RegexParser {
 				}
 				break;
 			case RECURSIVE_REPLACE_OP:
-				match(RegexTokenType.REPLACE_OP);
+				match(RegexTokenType.RECURSIVE_REPLACE_OP);
 				DFATable regex2 = parseRegex().toDFA();
 				match(RegexTokenType.WITH_OP);
 				match(RegexTokenType.START_ASCII);
@@ -164,7 +184,13 @@ public class RegexParser {
 				match(RegexTokenType.IN_OP);
 				String[] files2 = filenames();
 				if (files2[0] != files2[1]) {
-					while (replaceString(regex2, tok2, files2));
+					while (true) {
+						boolean tokensReplaced = replaceString(regex2, tok2, files2);
+						if(!tokensReplaced) {
+							break;
+						}
+						files2[0] = files2[1];
+					}
 				} else {
 					throw new Exception("Thou art an idiot! " + files2[0] + " = " + files2[1] + "! This should not be!");
 				}
@@ -806,6 +832,8 @@ public class RegexParser {
 		
 		if (oldLine == line)
 			throw new Exception("Thou art an idiot! " + ASCII.getValue() + " = " + ASCII.getValue() + "! This should not be!");
+		
+		inputFileReader.close();
 		
 		PrintWriter out = new PrintWriter(new FileWriter("tests/" + files[1]));
 		
