@@ -148,37 +148,79 @@ public enum RegexTokenType {
 	 */
 	public static String getTokenDescription(RegexTokenType type) {
 		switch (type) {
-			case RE_CHAR:
-			case SET_CHAR:
-				return "Valid Character";
-			case CHAR_CLASS:
-				return "Character Class";
-			case INVALID_CHAR_CLASS:
-				return "Invalid Character Class Name";
-			case OPEN_PAR:
-				return "(";
-			case CLOSE_PAR:
-				return ")";
-			case OPEN_BRACKET:
-				return "[";
-			case CLOSE_BRACKET:
-				return "]";
-			case ANY_CHAR:
-				return ".";
-			case ZERO_OR_MORE_REP:
-				return "*";
-			case ONE_OR_MORE_REP:
-				return "+";
-			case UNION_OP:
-				return "|";
-			case NEGATIVE_SET:
-				return "^";
-			case IN_OP:
-				return "keyword IN";
-			case EOS:
-				return "End Of String";
-			case INVALID_ESCAPE:
-				return "Invalid Escape Sequence";	
+		case RE_CHAR:
+		case SET_CHAR:
+			return "CHARACTER";
+		case CHAR_CLASS:
+			return "$CHAR_CLASS";
+		case INVALID_CHAR_CLASS:
+			return "Invalid Character Class Name";
+		case OPEN_PAR:
+			return "(";
+		case CLOSE_PAR:
+			return ")";
+		case OPEN_BRACKET:
+			return "[";
+		case CLOSE_BRACKET:
+			return "]";
+		case ANY_CHAR:
+			return ".";
+		case ZERO_OR_MORE_REP:
+			return "*";
+		case ONE_OR_MORE_REP:
+			return "+";
+		case UNION_OP:
+			return "|";
+		case NEGATIVE_SET:
+			return "^";
+		case IN_OP:
+			return "keyword IN";
+		case EOS:
+			return "End Of String";
+		case INVALID_ESCAPE:
+			return "Invalid Escape Sequence";	
+		case ID:
+			return "ID";
+		case ASCIISTR:
+			return "ASCII-STR";
+		case EQUALS_OP:
+			return "keyword =";
+		case POUND_OP:
+			return "keyword #";
+		case PIPE_OP:
+			return "keyword >!";
+		case COMMA:
+			return "keyword ,";
+		case SEMICOLON:
+			return "keyword ;";
+		case BEGIN_OP:
+			return "keyword begin";
+		case END_OP:
+			return "keyword end";
+		case REPLACE_OP:
+			return "keyword replace";
+		case RECURSIVE_REPLACE_OP:
+			return "keyword recursivereplace";
+		case INTERS_OP:
+			return "keyword inters";
+		case PRINT_OP:
+			return "keyword print";
+		case WITH_OP:
+			return "keyword with";
+		case FIND_OP:
+			return "keyword find";
+		case DIFF_OP:
+			return "keyword diff";
+		case MAXFREQSTRING_OP:
+			return "keyword maxfreqinstring";
+		case INVALID_TOKEN:
+			return "invalid token";
+		case START_REGEX:
+			return "start of regex";
+		case START_ASCII:
+			return "start of ascii";
+		case END_REGEX:
+			return "end of regex";
 			default:
 				return "INVALID Token";
 		}

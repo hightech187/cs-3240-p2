@@ -69,6 +69,13 @@ public class RegexScanner {
 	private boolean endRegexOnQuote = true;
 	
 	
+	public int getCurLine() {
+		return line_num;
+	}
+	public int getCurPos() {
+		return curPosInLine;
+	}
+	
 		
 	
 	/**

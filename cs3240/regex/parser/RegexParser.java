@@ -3,7 +3,6 @@ package cs3240.regex.parser;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Hashtable;
 import java.util.ArrayList;
@@ -169,10 +168,10 @@ public class RegexParser {
 				RegexToken tok = matchASCII();
 				match(RegexTokenType.IN_OP);
 				String[] files = filenames();
-				if (files[0] != files[1]) {
+				if (!files[0].equals(files[1])) {
 					replaceString(regex, tok, files);
 				} else {
-					throw new Exception("Thou art an idiot! " + files[0] + " = " + files[1] + "! This should not be!");
+					throw new Exception("An error occurred @ line " + scanner.getCurLine() + " (col " + scanner.getCurPos() + "): " + "Thou art an idiot! " + files[0] + " = " + files[1] + "! This should not be!");
 				}
 				break;
 			case RECURSIVE_REPLACE_OP:
@@ -181,9 +180,13 @@ public class RegexParser {
 				match(RegexTokenType.WITH_OP);
 				match(RegexTokenType.START_ASCII);
 				RegexToken tok2 = matchASCII();
+
+				Driver driver = new Driver(tok2, regex2);
+				driver.run();
+				
 				match(RegexTokenType.IN_OP);
 				String[] files2 = filenames();
-				if (files2[0] != files2[1]) {
+				if (!files2[0].equals(files2[1])) {
 					while (true) {
 						boolean tokensReplaced = replaceString(regex2, tok2, files2);
 						if(!tokensReplaced) {
@@ -192,7 +195,7 @@ public class RegexParser {
 						files2[0] = files2[1];
 					}
 				} else {
-					throw new Exception("Thou art an idiot! " + files2[0] + " = " + files2[1] + "! This should not be!");
+					throw new Exception("An error occurred @ line " + scanner.getCurLine() + " (col " + scanner.getCurPos() + "): " + "Thou art an idiot! " + files2[0] + " = " + files2[1] + "! This should not be!");
 				}
 				break;
 			case PRINT_OP:
@@ -219,6 +222,7 @@ public class RegexParser {
 		names[0] = sourceFile();
 		match(RegexTokenType.PIPE_OP);
 		names[1] = destinationFile();
+		
 		return names;
 	}
 	
@@ -328,7 +332,7 @@ public class RegexParser {
 				if (varList.containsKey(ID))
 					return varList.get(ID);
 				
-				throw new Exception("The ID value " + ID + " isn't a known variable..");
+				throw new Exception("An error occurred @ line " + scanner.getCurLine() + " (col " + scanner.getCurPos() + "): " + "The ID value " + ID + " isn't a known variable..");
 		}
 	}
 	
@@ -800,7 +804,7 @@ public class RegexParser {
 		this.regex = regex;
 	}
 	
-	private ArrayList<String> findString(DFATable regex, String file) throws IOException {
+	private ArrayList<String> findString(DFATable regex, String file) throws Exception {
 		Driver driver = new Driver(file, regex);
 		ArrayList<Driver.Token> tokens = driver.run();
 		ArrayList<String> strings = new ArrayList<String>();
@@ -831,7 +835,7 @@ public class RegexParser {
 		}
 		
 		if (oldLine == line)
-			throw new Exception("Thou art an idiot! " + ASCII.getValue() + " = " + ASCII.getValue() + "! This should not be!");
+			throw new Exception("An error occurred @ line " + scanner.getCurLine() + " (col " + scanner.getCurPos() + "): " + "Thou art an idiot! " + ASCII.getValue() + " = " + ASCII.getValue() + "! This should not be!");
 		
 		inputFileReader.close();
 		

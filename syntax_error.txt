@@ -1,0 +1,6 @@
+begin
+matches = find NOT_A_REGEX '[A-Za-z]*ment[A-Za-z]*' in "file1.txt" intersec find '(A|a) [A-Za-z]*' in "file2.txt";
+num_matchs = #matchez;
+print (num_matchs);
+recursivereplace '[A-Za-z]*ment' with "" in "file1.txt" >! "file3.txt";   
+end

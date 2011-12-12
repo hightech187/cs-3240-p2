@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import cs3240.regex.automaton.DFATable;
+import cs3240.regex.scanner.token.RegexToken;
 
 /**
  * This class represent a driver program
@@ -25,6 +26,8 @@ public class Driver {
 	 * The DFA Table used to identify the type of the tokens in the file 
 	 */
 	private DFATable dfa;
+	
+	private RegexToken regextoken;
 	/**
 	 * A list of the tokens from the code file
 	 */
@@ -46,6 +49,12 @@ public class Driver {
 		this.tokens = new ArrayList<Driver.Token>(); // Initialize the list for Tokens
 	}
 	
+	public Driver(RegexToken rt, DFATable dfa) {
+		this.regextoken = rt;
+		this.dfa = dfa;
+		this.tokens = new ArrayList<Driver.Token>(); // Initialize the list for Tokens
+	}
+	
 	/**
 	 * Analyzes the contents of the code file and attempt 
 	 * to identify the type of token for each of 
@@ -53,7 +62,16 @@ public class Driver {
 	 * 
 	 * @throws IOException exception may occur from either file not existing or during reading of the file
 	 */
-	public ArrayList<Driver.Token> run() throws IOException {
+	public ArrayList<Driver.Token> run() throws IOException, Exception {
+		
+		if (regextoken != null) {
+			Driver.Token candidate = processString(regextoken.getValue());
+			if (candidate.type == "INVALID" || candidate.type == "YOKEL") {
+				return null;
+			}
+			throw new Exception("String cannot match regex pattern");
+		}
+		
 		// Open a new reader for the file
 		BufferedReader fileReader = new BufferedReader(new FileReader("src/" + filename));
 
